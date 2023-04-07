@@ -1,0 +1,17 @@
+// clase A
+class A:V{
+    I32: s; // atributo
+    // metodo para sumar
+    static fn suma(I32:n, I32:m) -> I32{
+        s = n + m;
+        return s;
+    }
+    fn getS()->I32{
+    Array: arr;
+    (IO.out_i32(arr[s]))
+        return s;
+    }
+}
+/* fin del
+codigo
+*/

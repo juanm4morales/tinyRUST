@@ -1,0 +1,7 @@
+fn main() {
+    (IO.out_str(""Ingrese la operacion matematica (por ejemplo, 2 + 3"));
+        /* en un rato cierro el comentario
+    };
+
+    println!("El resultado es: {}", result);
+}

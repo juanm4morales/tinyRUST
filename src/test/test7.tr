@@ -1,0 +1,12 @@
+class A:V{
+    Bool: bv; // atributo
+    I32: numero = 54;
+    // metodo para sumar
+    static fn suma(I32:n, I32:m) -> I32{
+        if (n==m & m*n==numero){return true;
+}
+    }
+    fn getS()->I32{
+        return s;
+    }
+}

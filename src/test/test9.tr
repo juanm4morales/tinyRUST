@@ -1,0 +1,8 @@
+class A{
+/* holas
+    I32:i;
+*/
+    I32:j;
+    (IO.out_i32(s));
+    (IO.out_str("No quiero cerrar comillas));
+}

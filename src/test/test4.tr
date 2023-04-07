@@ -1,0 +1,18 @@
+fn main(){
+    I32: max = 200;
+    I32: num = 0;
+    // Identificador invalido
+
+    Str: 9cadena = "";
+    while (true){
+        (IO.out_str("TESTING"));
+        num = (num + 1)*4
+        if (max<=num){
+            return nil;
+        }
+    }
+}
+
+
+
+
