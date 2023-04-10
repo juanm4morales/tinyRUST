@@ -54,6 +54,7 @@ public class Lexer{
         words.put("Str","Str");
         words.put("Char","Char");
         words.put("Array","Array");
+        words.put("main","main");
     }
     // Estados del autómata finito usado para reconocer lexemas y generar tokens
     private enum State{
@@ -152,7 +153,7 @@ public class Lexer{
                 return token;
             }
         }
-        token=transitionPlus(lexeme);
+        token=new Token("EOF", null, row, col);
         return token;
     }
 
@@ -283,12 +284,12 @@ public class Lexer{
                     dfa_state=State.ID;
                 }
                 else{
+                    canRead=false;
                     if (words.containsKey(lexeme.toString())){
                         return new Token(words.get(lexeme.toString()),
                                 lexeme.toString(),rowT,colT);
                     }
                     //lexeme.deleteCharAt(lexeme.toString().length()-1);
-                    canRead=false;
                     return new Token("ID", lexeme.toString(),rowT,colT);
                 }
                 break;
@@ -298,12 +299,12 @@ public class Lexer{
                     dfa_state=State.CLASSID;
                 }
                 else{
+                    canRead=false;
                     if (words.containsKey(lexeme.toString())){
                         return new Token(words.get(lexeme.toString()),
                                 lexeme.toString(),rowT,colT);
                     }
                     // lexeme.deleteCharAt(lexeme.toString().length()-1);
-                    canRead=false;
                     return new Token("CLASSID", lexeme.toString(),rowT,colT);
                 }
                 break;

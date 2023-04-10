@@ -7,94 +7,164 @@ import Frontend.Lexer.Token;
 import java.beans.Expression;
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Objects;
 
+/**
+ * Esta clase representa al analizador sintáctico descendente predictivo recursivo
+ * junto a sus atributos y métodos necesarios para llevar a cabo su tarea
+ */
 public class Parser {
-    private Token currentToken;
-    private final Lexer lexer;
-    private final Grammar grammar;
+    private Token currentToken;             // token actual
+    private final Lexer lexer;              // Objeto Lexer (analizador léxico)
+    private final Grammar grammar;          // Objeto Grammar (No terminales, primeros y siguientes
+    private boolean error;                  // ha ocurrido un error
 
     public Parser(BufferedReader sourceCode) {
         lexer = new Lexer(sourceCode);
         grammar = new Grammar();
-
     }
-    private void match(String tag) throws IOException, LexerException {
+
+    /**
+     * Método inicial para analizar sintácticamente el código fuente
+     * @throws IOException
+     * @throws LexerException
+     * @throws ParserException
+     */
+    public void parse() throws IOException, LexerException, ParserException {
+        currentToken = lexer.getNextToken();
+        Start();
+    }
+
+    /**
+     * Verifica si el token actual "matchea" con el terminal
+     * @param tag
+     * @throws IOException
+     * @throws LexerException
+     * @throws ParserException
+     */
+    private void match(String tag) throws IOException, LexerException,
+            ParserException {
         if (Objects.equals(currentToken.getTag(), tag)){
             currentToken = lexer.getNextToken();
         }
         else {
-            System.out.println("ERROR!");
+            throw new ParserException("Se esperaba \"" + tag +"\"",
+                    currentToken.row, currentToken.col);
         }
     }
-    private String match(String[] tags) throws IOException, LexerException {
+
+    /**
+     * Verifica si el token actual "matchea" con alguno de los posibles terminales
+     * @param tags
+     * @return
+     * @throws IOException
+     * @throws LexerException
+     * @throws ParserException
+     */
+    private String match(String[] tags) throws IOException, LexerException,
+            ParserException {
         for (String tag : tags) {
             if (Objects.equals(currentToken.getTag(), tag)) {
                 currentToken = lexer.getNextToken();
                 return tag;
             }
         }
-        System.out.println("ERROR!");
-        return null;
+        throw new ParserException("Se esperaba alguno de los siguientes" +
+                " tokens: " + Arrays.toString(tags), currentToken.row,
+                currentToken.col);
     }
 
-    private void Start() throws IOException, LexerException {
-        if (grammar.getFirsts(Grammar.NonTerminal.ClaseR).contains(
-                currentToken.getTag())){
+    /**
+     * Determina si el token actual se encuentra en el conjunto de primeros del
+     * no terminal pasado por argumento
+     * @param nonTerminal
+     * @return
+     */
+    private boolean isInFirstSet(Grammar.NonTerminal nonTerminal) {
+        return grammar.getFirsts(nonTerminal).contains(currentToken.getTag())
+                || grammar.getFirsts(nonTerminal).contains("");
+    }
+
+    /*
+    A continuación se encuentran todos los métodos que simulan el comportamiento
+    de las reglas de producción de determinado no terminal. El nombre de dicho
+    no terminal coincide con el nombre del método.
+    Menos en los métodos que tienen como sufijo la palbra "Right", estos métodos
+    son para simplificar el código,
+     */
+    private void Start() throws IOException, LexerException, ParserException {
+        if (isInFirstSet(Grammar.NonTerminal.ClaseR)){
             ClaseR();
-        }
-        else {
-            if (grammar.getFirsts(Grammar.NonTerminal.Main).contains(
-                    currentToken.getTag())){
+            if (isInFirstSet(Grammar.NonTerminal.Main)){
                 Main();
+                if (!Objects.equals(currentToken.getTag(), "EOF")){
+                    throw new ParserException("No puede" +
+                            " haber nada después del método Main",
+                            currentToken.row, currentToken.col);
+                }
             }
             else {
-                System.out.println("ERROR!");
+                throw new ParserException("Se esperaba" +
+                        " un método Main", currentToken.row, currentToken.col);
             }
         }
+        else {
+            if (isInFirstSet(Grammar.NonTerminal.Main)){
+                Main();
+                if (!Objects.equals(currentToken.getTag(), "EOF")){
+                    throw new ParserException("No puede" +
+                            " haber nada después del método Main",
+                            currentToken.row, currentToken.col);
+                }
+            }
+            else {
+                throw new ParserException("Se esperaba" +
+                        " un método Main", currentToken.row, currentToken.col);
+            }
+        }
+
     }
-    private void ClaseR() throws IOException, LexerException {
-        if (grammar.getFirsts(Grammar.NonTerminal.Clase).contains(
-                currentToken.getTag())){
+    private void ClaseR() throws IOException, LexerException, ParserException {
+        if (isInFirstSet(Grammar.NonTerminal.Clase)){
             Clase();
-            if (grammar.getFirsts(Grammar.NonTerminal.ClaseR).contains(
-                    currentToken.getTag())){
+            if (isInFirstSet(Grammar.NonTerminal.ClaseR)){
                 ClaseR();
             }
         }
         else {
-            System.out.println("ERROR!");
+            throw new ParserException("Se esperaba" +
+                    " una clase", currentToken.row, currentToken.col);
         }
     }
-    private void Main() throws IOException, LexerException {
+    private void Main() throws IOException, LexerException, ParserException {
         match("fn");
         match("main");
         match("(");
         match(")");
-        if (grammar.getFirsts(Grammar.NonTerminal.BloqueMetodo).contains(
-                currentToken.getTag())){
+        if (isInFirstSet(Grammar.NonTerminal.BloqueMetodo)){
             BloqueMetodo();
         }
         else{
-            System.out.println("ERROR!");
+            throw new ParserException("Se esperaba" +
+                    " un bloque de método", currentToken.row, currentToken.col);
         }
 
     }
-    private void Clase() throws IOException, LexerException {
+    private void Clase() throws IOException, LexerException, ParserException {
         match("class");
         match("CLASSID");
-        if (grammar.getFirsts(Grammar.NonTerminal.Clase_1).contains(
-                currentToken.getTag())){
+        if (isInFirstSet(Grammar.NonTerminal.Clase_1)){
             Clase_1();
         }
         else{
-            System.out.println("ERROR!");
+            throw new ParserException("Se esperaba o \":\"" +
+                    " o \"{\"", currentToken.row, currentToken.col);
         }
     }
 
-    private void Clase_1() throws IOException, LexerException {
-        if (grammar.getFirsts(Grammar.NonTerminal.Herencia).contains(
-                currentToken.getTag())){
+    private void Clase_1() throws IOException, LexerException, ParserException {
+        if (isInFirstSet(Grammar.NonTerminal.Herencia)){
             Herencia();
             Clase_1Right();
         }
@@ -102,21 +172,19 @@ public class Parser {
             Clase_1Right();
         }
     }
-    private void Clase_1Right() throws IOException, LexerException {
+    private void Clase_1Right() throws IOException, LexerException,
+            ParserException {
         match("{");
-        if (grammar.getFirsts(Grammar.NonTerminal.Clase_2).contains(
-                currentToken.getTag())){
+        if (isInFirstSet(Grammar.NonTerminal.Clase_2)){
             Clase_2();
         }
         else {
-            System.out.println("ERROR!");
+            throw new ParserException("Se esperaba un Atributo, Constructor," +
+                    " Método o \"}\"", currentToken.row, currentToken.col);
         }
-
     }
-
-    private void Clase_2() throws IOException, LexerException {
-        if (grammar.getFirsts(Grammar.NonTerminal.MiembroR).contains(
-                currentToken.getTag())) {
+    private void Clase_2() throws IOException, LexerException, ParserException {
+        if (isInFirstSet(Grammar.NonTerminal.MiembroR)) {
             MiembroR();
             match("}");
         }
@@ -125,51 +193,51 @@ public class Parser {
         }
     }
 
-    private void MiembroR() throws IOException, LexerException {
-        if (grammar.getFirsts(Grammar.NonTerminal.Miembro).contains(
-                currentToken.getTag())){
+    private void MiembroR() throws IOException, LexerException,
+            ParserException {
+        if (isInFirstSet(Grammar.NonTerminal.Miembro)){
             Miembro();
-            if (grammar.getFirsts(Grammar.NonTerminal.MiembroR).contains(
-                    currentToken.getTag())){
+            if (isInFirstSet(Grammar.NonTerminal.MiembroR)){
                 MiembroR();
             }
         }
         else {
-            System.out.println("ERROR!");
+            throw new ParserException("Se esperaba un Atributo, Constructor" +
+                    " o Método", currentToken.row, currentToken.col);
         }
     }
 
-    private void Herencia() throws IOException, LexerException {
+    private void Herencia() throws IOException, LexerException,
+            ParserException {
         match(":");
-        match("idClase");
+        match("CLASSID");
     }
 
-    private void Miembro() throws IOException, LexerException {
-        if (grammar.getFirsts(Grammar.NonTerminal.Atributo).contains(
-                currentToken.getTag())){
+    private void Miembro() throws IOException, LexerException, ParserException {
+        if (isInFirstSet(Grammar.NonTerminal.Atributo)){
             Atributo();
         }
         else {
-            if (grammar.getFirsts(Grammar.NonTerminal.Constructor).contains(
-                    currentToken.getTag())){
+            if (isInFirstSet(Grammar.NonTerminal.Constructor)){
                 Constructor();
 
             }
             else {
-                if (grammar.getFirsts(Grammar.NonTerminal.Metodo).contains(
-                        currentToken.getTag())){
+                if (isInFirstSet(Grammar.NonTerminal.Metodo)){
                     Metodo();
                 }
                 else {
-                    System.out.println("ERROR!");
+                    throw new ParserException("Se esperaba un Atributo," +
+                            " Constructor o Método", currentToken.row,
+                            currentToken.col);
                 }
             }
         }
     }
 
-    private void Atributo() throws IOException, LexerException {
-        if (grammar.getFirsts(Grammar.NonTerminal.Visibilidad).contains(
-                currentToken.getTag())){
+    private void Atributo() throws IOException, LexerException,
+            ParserException {
+        if (isInFirstSet(Grammar.NonTerminal.Visibilidad)){
             Visibilidad();
             AtributoRight();
         }
@@ -177,48 +245,50 @@ public class Parser {
             AtributoRight();
         }
     }
-    private void AtributoRight() throws IOException, LexerException {
-        if (grammar.getFirsts(Grammar.NonTerminal.Tipo).contains(
-                currentToken.getTag())){
+    private void AtributoRight() throws IOException, LexerException,
+            ParserException {
+        if (isInFirstSet(Grammar.NonTerminal.Tipo)){
             Tipo();
             match(":");
-            if (grammar.getFirsts(Grammar.NonTerminal.ListaDeclVar)
-                    .contains(currentToken.getTag())){
+            if (isInFirstSet(Grammar.NonTerminal.ListaDeclVar)){
                 ListaDeclVar();
                 match(";");
             }
             else {
-                //ERROR
+                throw new ParserException("Se esperaba(n) " +
+                        "identicador(es) de variable", currentToken.row,
+                        currentToken.col);
             }
         }
         else {
-            System.out.println("ERROR!");
+            throw new ParserException("Se esperaba un Tipo",
+                    currentToken.row, currentToken.col);
         }
     }
 
-    private void Constructor() throws IOException, LexerException {
+    private void Constructor() throws IOException, LexerException,
+            ParserException {
         match("create");
-        if (grammar.getFirsts(Grammar.NonTerminal.ArgsFormales).contains(
-                currentToken.getTag())){
+        if (isInFirstSet(Grammar.NonTerminal.ArgsFormales)){
             ArgsFormales();
-            if (grammar.getFirsts(Grammar.NonTerminal.Bloque).contains(
-                    currentToken.getTag())){
+            if (isInFirstSet(Grammar.NonTerminal.Bloque)){
                 Bloque();
             }
             else {
-                System.out.println("ERROR!");
+                throw new ParserException("Se esperaba \"{\"", currentToken.row,
+                        currentToken.col);
             }
         }
         else {
-            System.out.println("ERROR!");
+            throw new ParserException("Se esperaba " +
+                    "\"(\"", currentToken.row, currentToken.col);
         }
 
 
     }
 
-    private void Metodo() throws IOException, LexerException {
-        if (grammar.getFirsts(Grammar.NonTerminal.FormaMetodo).contains(
-                currentToken.getTag())){
+    private void Metodo() throws IOException, LexerException, ParserException {
+        if (isInFirstSet(Grammar.NonTerminal.FormaMetodo)){
             FormaMetodo();
             MetodoRight();
         }
@@ -227,46 +297,48 @@ public class Parser {
         }
 
     }
-    private void MetodoRight() throws IOException, LexerException {
+    private void MetodoRight() throws IOException, LexerException,
+            ParserException {
         match("fn");
-        match("idMetodoVarible");
-        if (grammar.getFirsts(Grammar.NonTerminal.ArgsFormales).contains(
-                currentToken.getTag())){
+        match("ID");
+        if (isInFirstSet(Grammar.NonTerminal.ArgsFormales)){
             ArgsFormales();
             match("->");
-            if (grammar.getFirsts(Grammar.NonTerminal.TipoMetodo).contains(
-                    currentToken.getTag())){
+            if (isInFirstSet(Grammar.NonTerminal.TipoMetodo)){
                 TipoMetodo();
-                if (grammar.getFirsts(Grammar.NonTerminal.BloqueMetodo)
-                        .contains(currentToken.getTag())){
+                if (isInFirstSet(Grammar.NonTerminal.BloqueMetodo)){
                     BloqueMetodo();
                 }
                 else {
-                    System.out.println("ERROR!");
+                    throw new ParserException("Se esperaba un bloque de" +
+                            " método", currentToken.row, currentToken.col);
                 }
             }
             else {
-                System.out.println("ERROR!");
+                throw new ParserException("Se esperaba el tipo de retorno del" +
+                        " método", currentToken.row, currentToken.col);
             }
         }
         else {
-            System.out.println("ERROR!");
+            throw new ParserException("Se esperaba \"(\"", currentToken.row,
+                    currentToken.col);
         }
     }
-    private void ArgsFormales() throws IOException, LexerException {
+    private void ArgsFormales() throws IOException, LexerException,
+            ParserException {
         match("(");
-        if (grammar.getFirsts(Grammar.NonTerminal.ArgsFormales_1).contains(
-                currentToken.getTag())){
+        if (isInFirstSet(Grammar.NonTerminal.ArgsFormales_1)){
             ArgsFormales_1();
         }
         else {
-            System.out.println("ERROR!");
+            throw new ParserException("Se esperaba un Tipo",
+                    currentToken.row, currentToken.col);
         }
     }
 
-    private void ArgsFormales_1() throws IOException, LexerException {
-        if (grammar.getFirsts(Grammar.NonTerminal.ListaArgsFormales).contains(
-                currentToken.getTag())){
+    private void ArgsFormales_1() throws IOException, LexerException,
+            ParserException {
+        if (isInFirstSet(Grammar.NonTerminal.ListaArgsFormales)){
             ListaArgsFormales();
             match(")");
         }
@@ -275,159 +347,173 @@ public class Parser {
         }
     }
 
-    private void ListaArgsFormales() throws IOException, LexerException {
-        if (grammar.getFirsts(Grammar.NonTerminal.ArgFormal).contains(
-                currentToken.getTag())){
+    private void ListaArgsFormales() throws IOException, LexerException,
+            ParserException {
+        if (isInFirstSet(Grammar.NonTerminal.ArgFormal)){
             ArgFormal();
-            if (grammar.getFirsts(Grammar.NonTerminal.ListaArgsFormales_1).contains(
-                    currentToken.getTag())){
+            if (isInFirstSet(Grammar.NonTerminal.ListaArgsFormales_1)){
                 ListaArgsFormales_1();
             }
             else {
-                System.out.println("ERROR!");
+                throw new ParserException("Se esperaba \",\"",
+                        currentToken.row, currentToken.col);
             }
         }
         else {
-            System.out.println("ERROR!");
+            throw new ParserException("Se esperaba un Tipo",
+                    currentToken.row, currentToken.col);
         }
     }
 
-    private void ListaArgsFormales_1() throws IOException, LexerException {
+    private void ListaArgsFormales_1() throws IOException, LexerException,
+            ParserException {
         if (grammar.getFollows(Grammar.NonTerminal.ListaArgsFormales_1).contains(
                 currentToken.getTag())){
             ;
         }
         else {
             match(",");
-            if (grammar.getFirsts(Grammar.NonTerminal.ListaArgsFormales).contains(
-                    currentToken.getTag())){
+            if (isInFirstSet(Grammar.NonTerminal.ListaArgsFormales)){
                 ListaArgsFormales();
             }
             else {
-                System.out.println("ERROR!");
+                throw new ParserException("Se esperaba un Tipo",
+                        currentToken.row, currentToken.col);
             }
         }
     }
 
-    private void ArgFormal() throws IOException, LexerException {
-        if (grammar.getFirsts(Grammar.NonTerminal.Tipo).contains(
-                currentToken.getTag())){
+    private void ArgFormal() throws IOException, LexerException,
+            ParserException {
+        if (isInFirstSet(Grammar.NonTerminal.Tipo)){
             Tipo();
             match(":");
-            match("idMetodoVariable");
+            match("ID");
         }
         else {
-            System.out.println("ERROR!");
+            throw new ParserException("Se esperaba un Tipo",
+                    currentToken.row, currentToken.col);
         }
     }
 
-    private void FormaMetodo() throws IOException, LexerException {
+    private void FormaMetodo() throws IOException, LexerException,
+            ParserException {
         match("static");
     }
 
-    private void Visibilidad() throws IOException, LexerException {
+    private void Visibilidad() throws IOException, LexerException,
+            ParserException {
         match("pub");
     }
 
-    private void TipoMetodo() throws IOException, LexerException {
-        if (grammar.getFirsts(Grammar.NonTerminal.Tipo).contains(
-                currentToken.getTag())){
+    private void TipoMetodo() throws IOException, LexerException,
+            ParserException {
+        if (isInFirstSet(Grammar.NonTerminal.Tipo)){
             Tipo();
         }
         else {
             match("void");
         }
     }
-    private void Tipo() throws IOException, LexerException {
-        if (grammar.getFirsts(Grammar.NonTerminal.TipoPrimitivo).contains(
-                currentToken.getTag())){
+    private void Tipo() throws IOException, LexerException, ParserException {
+        if (isInFirstSet(Grammar.NonTerminal.TipoPrimitivo)){
             TipoPrimitivo();
         }
         else {
-            if (grammar.getFirsts(Grammar.NonTerminal.TipoReferencia).contains(
-                    currentToken.getTag())){
+            if (isInFirstSet(Grammar.NonTerminal.TipoReferencia)){
                 TipoReferencia();
             }
             else {
-                if (grammar.getFirsts(Grammar.NonTerminal.TipoArray).contains(
-                        currentToken.getTag())){
+                if (isInFirstSet(Grammar.NonTerminal.TipoArray)){
                     TipoArray();
                 }
                 else {
-                    System.out.println("ERROR!");
+                    throw new ParserException("Se esperaba " +
+                            "un Tipo", currentToken.row, currentToken.col);
                 }
             }
         }
     }
-    private void TipoPrimitivo() throws IOException, LexerException {
+    private void TipoPrimitivo() throws IOException, LexerException,
+            ParserException {
         match(new String[]{"Bool", "I32", "Str", "Char"});
     }
 
-    private void TipoReferencia() throws IOException, LexerException {
-        match("idClase");
+    private void TipoReferencia() throws IOException, LexerException,
+            ParserException {
+        match("CLASSID");
     }
 
-    private void TipoArray() throws IOException, LexerException {
+    private void TipoArray() throws IOException, LexerException,
+            ParserException {
         match("Array");
-        if (grammar.getFirsts(Grammar.NonTerminal.TipoPrimitivo).contains(
-                currentToken.getTag())){
+        if (isInFirstSet(Grammar.NonTerminal.TipoPrimitivo)){
             TipoPrimitivo();
         }
         else {
-            System.out.println("ERROR!");
+            throw new ParserException("Se esperaba un Tipo" +
+                    "Primitivo", currentToken.row, currentToken.col);
         }
     }
 
-    private void ListaDeclVar() throws IOException, LexerException {
-        match("idMetodoVariable");
+    private void ListaDeclVar() throws IOException, LexerException,
+    ParserException {
+        match("ID");
         if (Objects.equals(currentToken.getTag(), ",")){
             match(",");
-            if (grammar.getFirsts(Grammar.NonTerminal.ListaDeclVar).contains(
-                    currentToken.getTag())){
+            if (isInFirstSet(Grammar.NonTerminal.ListaDeclVar)){
                 ListaDeclVar();
             }
             else {
-                System.out.println("ERROR!");
+                throw new ParserException("Se esperaba(n) identicador(es) de " +
+                        "variable", currentToken.row, currentToken.col);
             }
         }
     }
-    private void BloqueMetodo() throws IOException, LexerException {
+    private void BloqueMetodo() throws IOException, LexerException,
+            ParserException {
         match("{");
-        if (grammar.getFirsts(Grammar.NonTerminal.BloqueMetodo_1).contains(
-                currentToken.getTag())){
+        if (isInFirstSet(Grammar.NonTerminal.BloqueMetodo_1)){
             BloqueMetodo_1();
         }
         else {
-            System.out.println("ERROR!");
+            throw new ParserException("Se esperaba Tipo, bucle While," +
+                    " estructura condicional, asignación, sentencia de" +
+                    " retorno, bloque, sentencia simple o \";\""
+                    , currentToken.row, currentToken.col);
         }
     }
 
-    private void BloqueMetodo_1() throws IOException, LexerException {
-        if (grammar.getFirsts(Grammar.NonTerminal.DeclVarLocalesR).contains(
-                currentToken.getTag())){
+    private void BloqueMetodo_1() throws IOException, LexerException,
+            ParserException {
+        if (isInFirstSet(Grammar.NonTerminal.DeclVarLocalesR)){
             DeclVarLocalesR();
-            if (grammar.getFirsts(Grammar.NonTerminal.BloqueMetodo_2).contains(
-                    currentToken.getTag())){
+            if (isInFirstSet(Grammar.NonTerminal.BloqueMetodo_2)){
                 BloqueMetodo_2();
             }
             else {
-                System.out.println("ERROR!");
+                throw new ParserException("Se esperaba bucle While," +
+                        " estructura condicional, asignación, sentencia de" +
+                        " retorno, bloque, sentencia simple, \";\" o \"}\""
+                        , currentToken.row, currentToken.col);
             }
         }
         else {
-            if (grammar.getFirsts(Grammar.NonTerminal.SentenciaR).contains(
-                    currentToken.getTag())){
+            if (isInFirstSet(Grammar.NonTerminal.SentenciaR)){
                 SentenciaR();
                 match("}");
             }
             else {
-                System.out.println("ERROR!");
+                throw new ParserException("Se esperaba bucle While "+
+                        ",estructura condicional, asignación, sentencia de" +
+                                " retorno, bloque, sentencia simple, o \";\"",
+                        currentToken.row, currentToken.col);
             }
         }
     }
-    private void BloqueMetodo_2() throws IOException, LexerException {
-        if (grammar.getFirsts(Grammar.NonTerminal.SentenciaR).contains(
-                currentToken.getTag())){
+    private void BloqueMetodo_2() throws IOException, LexerException,
+            ParserException {
+        if (isInFirstSet(Grammar.NonTerminal.SentenciaR)){
             SentenciaR();
             match("}");
         }
@@ -435,193 +521,128 @@ public class Parser {
             match("}");
         }
     }
-    private void DeclVarLocalesR() throws IOException, LexerException {
-        if (grammar.getFirsts(Grammar.NonTerminal.DeclVarLocales).contains(
-                currentToken.getTag())){
+    private void DeclVarLocalesR() throws IOException, LexerException,
+            ParserException {
+        if (isInFirstSet(Grammar.NonTerminal.DeclVarLocales)){
             DeclVarLocales();
-            if (grammar.getFirsts(Grammar.NonTerminal.DeclVarLocalesR).contains(
-                    currentToken.getTag())){
+            if (isInFirstSet(Grammar.NonTerminal.DeclVarLocalesR)){
                 DeclVarLocalesR();
             }
         }
         else {
-            System.out.println("ERROR!");
+            throw new ParserException("Se esperaba un Tipo" +
+                    "Primitivo", currentToken.row, currentToken.col);
         }
     }
 
-    private void SentenciaR() throws IOException, LexerException {
-        if (grammar.getFirsts(Grammar.NonTerminal.Sentencia).contains(
-                currentToken.getTag())){
+    private void SentenciaR() throws IOException, LexerException,
+            ParserException {
+        if (isInFirstSet(Grammar.NonTerminal.Sentencia)){
             Sentencia();
-            if (grammar.getFirsts(Grammar.NonTerminal.SentenciaR).contains(
-                    currentToken.getTag())){
+            if (isInFirstSet(Grammar.NonTerminal.SentenciaR)){
                 SentenciaR();
             }
         }
         else {
-            System.out.println("ERROR!");
+            throw new ParserException("Se esperaba bucle While estructura" +
+                    " condicional, asignación, sentencia de retorno, bloque," +
+                    " sentencia simple, o \";\"",
+                    currentToken.row, currentToken.col);
         }
     }
 
-    private void DeclVarLocales() throws IOException, LexerException {
-        if (grammar.getFirsts(Grammar.NonTerminal.Tipo).contains(
-                currentToken.getTag())){
+    private void DeclVarLocales() throws IOException, LexerException,
+            ParserException {
+        if (isInFirstSet(Grammar.NonTerminal.Tipo)){
             Tipo();
             match(":");
-            if (grammar.getFirsts(Grammar.NonTerminal.ListaDeclVar).contains(
-                    currentToken.getTag())){
+            if (isInFirstSet(Grammar.NonTerminal.ListaDeclVar)){
                 ListaDeclVar();
                 match(";");
             }
             else {
-                System.out.println("ERROR!");
+                throw new ParserException("Se esperaba(n) identicador(es) de" +
+                        " variable", currentToken.row, currentToken.col);
             }
         }
         else {
-            System.out.println("ERROR!");
+            throw new ParserException("Se esperaba un Tipo",
+                    currentToken.row, currentToken.col);
         }
     }
 
-    private void Sentencia() throws IOException, LexerException {
-        if (grammar.getFirsts(Grammar.NonTerminal.Sent_rel).contains(
-                currentToken.getTag())){
-            Sent_rel();
-        }
-        else {
-            if (grammar.getFirsts(Grammar.NonTerminal.Sent_ab).contains(
-                    currentToken.getTag())){
-                Sent_ab();
-            }
-            else {
-                System.out.println("ERROR!");
-            }
-        }
-    }
-
-    private void Sent_rel() throws IOException, LexerException {
-        if (grammar.getFirsts(Grammar.NonTerminal.OtraSent).contains(
-                currentToken.getTag())){
-            OtraSent();
-        }
-        else {
-            match("if");
-            match("(");
-            if (grammar.getFirsts(Grammar.NonTerminal.Expresion).contains(
-                    currentToken.getTag())){
-                Expresion();
-                match(")");
-                if (grammar.getFirsts(Grammar.NonTerminal.Sent_rel).contains(
-                        currentToken.getTag())){
-                    Sent_rel();
-                    match("else");
-                    if (grammar.getFirsts(Grammar.NonTerminal.Sent_rel).contains(
-                            currentToken.getTag())){
-                        Sent_rel();
-                    }
-                    else {
-                        System.out.println("ERROR!");
-                    }
-                }
-                else {
-                    System.out.println("ERROR!");
-                }
-            }
-            else {
-                System.out.println("ERROR!");
-            }
-        }
-    }
-
-    private void Sent_ab() throws IOException, LexerException {
-        match("if");
-        match("(");
-        if (grammar.getFirsts(Grammar.NonTerminal.Expresion).contains(
-                currentToken.getTag())) {
-            Expresion();
-            match(")");
-            if (grammar.getFirsts(Grammar.NonTerminal.Sent_ab_1).contains(
-                    currentToken.getTag())) {
-                Sent_ab_1();
-            } else {
-                System.out.println("ERROR!");
-            }
-        }
-        else {
-            System.out.println("ERROR!");
-        }
-    }
-    private void Sent_ab_1() throws IOException, LexerException {
-        if (grammar.getFirsts(Grammar.NonTerminal.Sentencia).contains(
-                currentToken.getTag())) {
-            Sentencia();
-        }
-        else {
-            if (grammar.getFirsts(Grammar.NonTerminal.Sent_rel).contains(
-                    currentToken.getTag())) {
-                Sent_rel();
-                match("else");
-                if (grammar.getFirsts(Grammar.NonTerminal.Sent_ab).contains(
-                        currentToken.getTag())) {
-                    Sent_ab();
-                }
-                else {
-                    System.out.println("ERROR!");
-                }
-            }
-            else {
-                System.out.println("ERROR!");
-            }
-        }
-    }
-
-    public void OtraSent() throws IOException, LexerException {
-        if (currentToken.getTag()==";"){
+    private void Sentencia() throws IOException, LexerException,
+            ParserException {
+        if (Objects.equals(currentToken.getTag(), ";")){
             match(";");
         }
         else {
-            if (grammar.getFirsts(Grammar.NonTerminal.Asignacion).contains(
-                    currentToken.getTag())) {
+            if (isInFirstSet(Grammar.NonTerminal.Asignacion)) {
                 Asignacion();
                 match(";");
             }
             else {
-                if (grammar.getFirsts(Grammar.NonTerminal.SentSimple).contains(
-                        currentToken.getTag())) {
+                if (isInFirstSet(Grammar.NonTerminal.SentSimple)) {
                     SentSimple();
                     match(";");
                 }
                 else {
-                    if (currentToken.getTag()=="while"){
+                    if (Objects.equals(currentToken.getTag(), "while")){
                         match("while");
                         match("(");
-                        if (grammar.getFirsts(Grammar.NonTerminal.Expresion)
-                                .contains(currentToken.getTag())) {
+                        if (isInFirstSet(Grammar.NonTerminal.Expresion)) {
                             Expresion();
                             match(")");
-                            if (grammar.getFirsts(
-                                    Grammar.NonTerminal.Sentencia).contains(
-                                    currentToken.getTag())) {
+                            if (isInFirstSet(Grammar.NonTerminal.Sentencia)) {
                                 Sentencia();
                             }
                             else {
-                                System.out.println("ERROR!");
+                                throw new ParserException("Se esperaba bucle" +
+                                        " While, estructura condicional," +
+                                        " asignación, sentencia de retorno," +
+                                        " bloque, sentencia simple, o \";\"",
+                                        currentToken.row, currentToken.col);
                             }
                         }
                         else {
-                            System.out.println("ERROR!");
+                            throw new ParserException("Se esperaba Expresión",
+                                    currentToken.row, currentToken.col);
                         }
                     }
                     else {
-                        if (grammar.getFirsts(Grammar.NonTerminal.Bloque)
-                                .contains(currentToken.getTag())) {
+                        if (isInFirstSet(Grammar.NonTerminal.Bloque)) {
                             Bloque();
                         }
                         else {
-                            match("return");
-                            if (grammar.getFirsts(
-                                    Grammar.NonTerminal.OtraSent_1)
-                                    .contains(currentToken.getTag())) {
-                                OtraSent_1();
+                            if (isInFirstSet(Grammar.NonTerminal.If)) {
+                                If();
+                            }
+                            else {
+                                if (Objects.equals(currentToken.getTag(),
+                                        "return")){
+                                    match("return");
+                                    if (isInFirstSet(Grammar.NonTerminal.
+                                            Return)) {
+                                        Return();
+                                    }
+                                    else {
+                                        throw new ParserException(
+                                                "Se esperaba Expresión o \";\"",
+                                                currentToken.row,
+                                                currentToken.col);
+
+                                    }
+                                }
+                                else {
+                                    throw new ParserException("Se esperaba" +
+                                            " bucle While, " +
+                                            "estructura condicional," +
+                                            " asignación, sentencia de " +
+                                            "retorno," +
+                                            " bloque, sentencia simple," +
+                                            " o \";\"",
+                                            currentToken.row, currentToken.col);
+                                }
                             }
                         }
                     }
@@ -630,77 +651,121 @@ public class Parser {
         }
     }
 
-    private void OtraSent_1() throws IOException, LexerException {
-        if (grammar.getFirsts(Grammar.NonTerminal.Expresion)
-                .contains(currentToken.getTag())) {
+    public void If() throws IOException, LexerException, ParserException {
+        match("if");
+        match("(");
+        if (isInFirstSet(Grammar.NonTerminal.Expresion)) {
+            Expresion();
+            match(")");
+            if (isInFirstSet(Grammar.NonTerminal.Sentencia)) {
+                Sentencia();
+                if (isInFirstSet(Grammar.NonTerminal.Else)) {
+                    Else();
+                }
+            }
+            else {
+                throw new ParserException("Se esperaba bucle While" +
+                        ",estructura condicional, asignación, sentencia de" +
+                        " retorno, bloque, sentencia simple, o \";\"",
+                        currentToken.row, currentToken.col);
+            }
+        }
+        else {
+            throw new ParserException("Se esperaba Expresión", currentToken.row,
+                    currentToken.col);
+        }
+    }
+    private void Else() throws IOException, LexerException, ParserException {
+        match("else");
+        if (isInFirstSet(Grammar.NonTerminal.Sentencia)) {
+            Sentencia();
+        }
+        else {
+            throw new ParserException("Se esperaba bucle While" +
+                    ",estructura condicional, asignación, sentencia de" +
+                    " retorno, bloque, sentencia simple, o \";\"",
+                    currentToken.row, currentToken.col);
+        }
+    }
+
+    private void Return() throws IOException, LexerException, ParserException {
+        if (isInFirstSet(Grammar.NonTerminal.Expresion)) {
             Expresion();
             match(";");
         }
-        match(";");
+        else {
+            match(";");
+        }
+
     }
 
-    private void Bloque() throws IOException, LexerException {
+    private void Bloque() throws IOException, LexerException, ParserException {
         match("{");
-        if (grammar.getFirsts(Grammar.NonTerminal.Bloque_1)
-                .contains(currentToken.getTag())) {
+        if (isInFirstSet(Grammar.NonTerminal.Bloque_1)) {
             Bloque_1();
         }
         else {
-            System.out.println("ERROR!");
+            throw new ParserException("Se esperaba bucle While, estructura" +
+                    " condicional, asignación, sentencia de retorno, bloque," +
+                    " sentencia simple, \";\" o \"}\""
+                    , currentToken.row, currentToken.col);
         }
     }
 
-    private void Bloque_1() throws IOException, LexerException {
-        if (grammar.getFirsts(Grammar.NonTerminal.SentenciaR)
-                .contains(currentToken.getTag())) {
+    private void Bloque_1() throws IOException, LexerException,
+            ParserException {
+        if (isInFirstSet(Grammar.NonTerminal.SentenciaR)) {
             SentenciaR();
             match("}");
         }
-        match("}");
+        else {
+            match("}");
+        }
+
     }
 
-    private void Asignacion() throws IOException, LexerException {
-        if (grammar.getFirsts(Grammar.NonTerminal.AsignVarSimple)
-                .contains(currentToken.getTag())) {
+    private void Asignacion() throws IOException, LexerException,
+            ParserException {
+        if (isInFirstSet(Grammar.NonTerminal.AsignVarSimple)) {
             AsignVarSimple();
             match("=");
-            if (grammar.getFirsts(Grammar.NonTerminal.Expresion)
-                    .contains(currentToken.getTag())) {
+            if (isInFirstSet(Grammar.NonTerminal.Expresion)) {
                 Expresion();
             }
             else {
-                System.out.println("ERROR!");
+                throw new ParserException("Se esperaba Expresión",
+                        currentToken.row, currentToken.col);
             }
         }
         else {
-            if (grammar.getFirsts(Grammar.NonTerminal.AsignSelfSimple)
-                    .contains(currentToken.getTag())) {
+            if (isInFirstSet(Grammar.NonTerminal.AsignSelfSimple)) {
                 AsignSelfSimple();
             }
             match("=");
-            if (grammar.getFirsts(Grammar.NonTerminal.Expresion)
-                    .contains(currentToken.getTag())) {
+            if (isInFirstSet(Grammar.NonTerminal.Expresion)) {
                 Expresion();
             }
             else {
-                System.out.println("ERROR!");
+                throw new ParserException("Se esperaba Expresión",
+                        currentToken.row, currentToken.col);
             }
         }
     }
 
-    private void AsignVarSimple() throws IOException, LexerException {
-        match("id");
-        if (grammar.getFirsts(Grammar.NonTerminal.AsignVarSimple_1)
-                .contains(currentToken.getTag())) {
+    private void AsignVarSimple() throws IOException, LexerException,
+            ParserException {
+        match("ID");
+        if (isInFirstSet(Grammar.NonTerminal.AsignVarSimple_1)) {
             AsignVarSimple_1();
         }
         else {
-            System.out.println("ERROR!");
+            throw new ParserException("Se esperaba \".\", \"[\" o \"=\"",
+                    currentToken.row, currentToken.col);
         }
     }
-    private void AsignVarSimple_1() throws IOException, LexerException {
-        if (grammar.getFirsts(Grammar.NonTerminal.EncadenadoSimpleR)
-                .contains(currentToken.getTag())) {
+    private void AsignVarSimple_1() throws IOException, LexerException,
+            ParserException {
+        if (isInFirstSet(Grammar.NonTerminal.EncadenadoSimpleR)) {
             EncadenadoSimpleR();
         }
         else {
@@ -710,352 +775,334 @@ public class Parser {
             }
             else {
                 match("[");
-                if (grammar.getFirsts(Grammar.NonTerminal.Expresion)
-                        .contains(currentToken.getTag())) {
+                if (isInFirstSet(Grammar.NonTerminal.Expresion)) {
                     Expresion();
                     match("[");
                 }
                 else {
-                    System.out.println("ERROR!");
+                    throw new ParserException("Se esperaba Expresión",
+                            currentToken.row, currentToken.col);
                 }
             }
         }
     }
 
-    private void AsignSelfSimple() throws IOException, LexerException {
+    private void AsignSelfSimple() throws IOException, LexerException,
+            ParserException {
         match("self");
-        if (grammar.getFirsts(Grammar.NonTerminal.EncadenadoSimpleR)
-                .contains(currentToken.getTag())) {
+        if (isInFirstSet(Grammar.NonTerminal.EncadenadoSimpleR)) {
             EncadenadoSimpleR();
         }
         else {
-            System.out.println("ERROR!");
+            throw new ParserException("Se esperaba \".\"",
+                    currentToken.row, currentToken.col);
         }
     }
 
-    private void EncadenadoSimpleR() throws IOException, LexerException {
-        if (grammar.getFirsts(Grammar.NonTerminal.EncadenadoSimpleR)
-                .contains(currentToken.getTag())) {
+    private void EncadenadoSimpleR() throws IOException, LexerException,
+            ParserException {
+        if (isInFirstSet(Grammar.NonTerminal.EncadenadoSimple)) {
             EncadenadoSimple();
-            if (grammar.getFirsts(Grammar.NonTerminal.EncadenadoSimpleR)
-                    .contains(currentToken.getTag())) {
+            if (isInFirstSet(Grammar.NonTerminal.EncadenadoSimpleR)) {
                 EncadenadoSimpleR();
             }
         }
         else {
-            System.out.println("ERROR!");
+            throw new ParserException("Se esperaba \".\"",
+                    currentToken.row, currentToken.col);
         }
     }
 
-    private void EncadenadoSimple() throws IOException, LexerException {
+    private void EncadenadoSimple() throws IOException, LexerException,
+            ParserException {
         match(".");
-        match("id");
+        match("ID");
     }
 
-    private void SentSimple() throws IOException, LexerException {
+    private void SentSimple() throws IOException, LexerException,
+            ParserException {
         match("(");
-        if (grammar.getFirsts(Grammar.NonTerminal.Expresion)
-                .contains(currentToken.getTag())) {
+        if (isInFirstSet(Grammar.NonTerminal.Expresion)) {
             Expresion();
             match(")");
         }
         else {
-            System.out.println("ERROR!");
+            throw new ParserException("Se esperaba Expresión",
+                    currentToken.row, currentToken.col);
         }
     }
 
-    private void Expresion() throws IOException, LexerException {
-        if (grammar.getFirsts(Grammar.NonTerminal.ExpAnd)
-                .contains(currentToken.getTag())) {
+    private void Expresion() throws IOException, LexerException,
+            ParserException {
+        if (isInFirstSet(Grammar.NonTerminal.ExpAnd)) {
             ExpAnd();
-            if (grammar.getFirsts(Grammar.NonTerminal.ExpresionRD)
-                    .contains(currentToken.getTag())) {
+            if (isInFirstSet(Grammar.NonTerminal.ExpresionRD)) {
                 ExpresionRD();
             }
         }
         else {
-            System.out.println("ERROR!");
+            throw new ParserException("Se esperaba Operando o Operador Unario",
+                    currentToken.row, currentToken.col);
         }
     }
 
-    private void ExpresionRD() throws IOException, LexerException {
+    private void ExpresionRD() throws IOException, LexerException,
+            ParserException {
         match("||");
-        if (grammar.getFirsts(Grammar.NonTerminal.ExpAnd)
-                .contains(currentToken.getTag())) {
+        if (isInFirstSet(Grammar.NonTerminal.ExpAnd)) {
             ExpAnd();
-            if (grammar.getFirsts(Grammar.NonTerminal.ExpresionRD)
-                    .contains(currentToken.getTag())) {
-                ExpresionRD();
-            }
-            else {
-                System.out.println("ERROR!");
-            }
-        }
-        else {
-            System.out.println("ERROR!");
-        }
-    }
-
-    private void ExpAnd() throws IOException, LexerException {
-        if (grammar.getFirsts(Grammar.NonTerminal.ExpIgual)
-                .contains(currentToken.getTag())) {
-            ExpIgual();
-            if (grammar.getFirsts(Grammar.NonTerminal.ExpAndRD)
-                    .contains(currentToken.getTag())) {
+            if (isInFirstSet(Grammar.NonTerminal.ExpresionRD)) {
                 ExpresionRD();
             }
         }
         else {
-            System.out.println("ERROR!");
+            throw new ParserException("Se esperaba Operando o Operador Unario",
+                    currentToken.row, currentToken.col);
         }
     }
 
-    private void ExpAndRD() throws IOException, LexerException {
-        match("&&");
-        if (grammar.getFirsts(Grammar.NonTerminal.ExpIgual)
-                .contains(currentToken.getTag())) {
+    private void ExpAnd() throws IOException, LexerException, ParserException {
+        if (isInFirstSet(Grammar.NonTerminal.ExpIgual)) {
             ExpIgual();
-            if (grammar.getFirsts(Grammar.NonTerminal.ExpAndRD)
-                    .contains(currentToken.getTag())) {
+            if (isInFirstSet(Grammar.NonTerminal.ExpAndRD)) {
                 ExpAndRD();
             }
-            else {
-                System.out.println("ERROR!");
-            }
         }
         else {
-            System.out.println("ERROR!");
+            throw new ParserException("Se esperaba Operador de igualdad" +
+                    " \"==\" o \"!=\"", currentToken.row, currentToken.col);
         }
     }
 
-    private void ExpIgual() throws IOException, LexerException {
-        if (grammar.getFirsts(Grammar.NonTerminal.ExpCompuesta)
-                .contains(currentToken.getTag())) {
+    private void ExpAndRD() throws IOException, LexerException,
+            ParserException {
+        match("&&");
+        if (isInFirstSet(Grammar.NonTerminal.ExpIgual)) {
+            ExpIgual();
+            if (isInFirstSet(Grammar.NonTerminal.ExpAndRD)) {
+                ExpAndRD();
+            }
+        }
+        else {
+            throw new ParserException("Se esperaba Operando o Operador Unario",
+                    currentToken.row, currentToken.col);
+        }
+    }
+
+    private void ExpIgual() throws IOException, LexerException,
+            ParserException {
+        if (isInFirstSet(Grammar.NonTerminal.ExpCompuesta)) {
             ExpCompuesta();
-            if (grammar.getFirsts(Grammar.NonTerminal.ExpIgualRD)
-                    .contains(currentToken.getTag())) {
+            if (isInFirstSet(Grammar.NonTerminal.ExpIgualRD)) {
                 ExpIgualRD();
             }
         }
         else {
-            System.out.println("ERROR!");
+            throw new ParserException("Se esperaba Operando o Operador Unario",
+                    currentToken.row, currentToken.col);
         }
     }
 
-    private void ExpIgualRD() throws IOException, LexerException {
-        if (grammar.getFirsts(Grammar.NonTerminal.OpIgual)
-                .contains(currentToken.getTag())) {
+    private void ExpIgualRD() throws IOException, LexerException,
+            ParserException {
+        if (isInFirstSet(Grammar.NonTerminal.OpIgual)) {
             OpIgual();
-            if (grammar.getFirsts(Grammar.NonTerminal.ExpCompuesta)
-                    .contains(currentToken.getTag())) {
+            if (isInFirstSet(Grammar.NonTerminal.ExpCompuesta)) {
                 ExpCompuesta();
-            }
-            else {
-                if (grammar.getFirsts(Grammar.NonTerminal.ExpIgualRD)
-                        .contains(currentToken.getTag())) {
+                if (isInFirstSet(Grammar.NonTerminal.ExpIgualRD)) {
                     ExpIgualRD();
                 }
-                else {
-                    System.out.println("ERROR!");
-                }
+            }
+            else {
+                throw new ParserException("Se esperaba Operando o Operador" +
+                        " Unario", currentToken.row, currentToken.col);
             }
         }
         else {
-            System.out.println("ERROR!");
+            throw new ParserException("Se esperaba Operador de igualdad" +
+                    " \"==\" o \"!=\"", currentToken.row, currentToken.col);
         }
     }
 
-    private void ExpCompuesta() throws IOException, LexerException {
-        if (grammar.getFirsts(Grammar.NonTerminal.ExpAdd)
-                .contains(currentToken.getTag())) {
+    private void ExpCompuesta() throws IOException, LexerException,
+            ParserException {
+        if (isInFirstSet(Grammar.NonTerminal.ExpAdd)) {
             ExpAdd();
-            if (grammar.getFirsts(Grammar.NonTerminal.OpCompuesto)
-                    .contains(currentToken.getTag())) {
+            if (isInFirstSet(Grammar.NonTerminal.OpCompuesto)) {
                 OpCompuesto();
-                if (grammar.getFirsts(Grammar.NonTerminal.ExpAdd)
-                        .contains(currentToken.getTag())) {
+                if (isInFirstSet(Grammar.NonTerminal.ExpAdd)) {
                     ExpAdd();
                 }
                 else {
-                    System.out.println("ERROR!");
+                    throw new ParserException("Se esperaba Operando o" +
+                            " Operador Unario", currentToken.row,
+                            currentToken.col);
                 }
-            }
-            else {
-                System.out.println("ERROR!");
             }
         }
         else {
-            System.out.println("ERROR!");
+            throw new ParserException("Se esperaba Operando o Operador Unario",
+                    currentToken.row, currentToken.col);
         }
     }
 
-    private void ExpAdd() throws IOException, LexerException {
-        if (grammar.getFirsts(Grammar.NonTerminal.ExpMul)
-                .contains(currentToken.getTag())) {
+    private void ExpAdd() throws IOException, LexerException, ParserException {
+        if (isInFirstSet(Grammar.NonTerminal.ExpMul)) {
             ExpMul();
-            if (grammar.getFirsts(Grammar.NonTerminal.ExpAddRD)
-                    .contains(currentToken.getTag())) {
+            if (isInFirstSet(Grammar.NonTerminal.ExpAddRD)) {
                 ExpAddRD();
             }
         }
         else {
-            System.out.println("ERROR!");
+            throw new ParserException("Se esperaba Operando o Operador Unario",
+                    currentToken.row, currentToken.col);
         }
     }
 
-    private void ExpAddRD() throws IOException, LexerException {
-        if (grammar.getFirsts(Grammar.NonTerminal.OpAdd)
-                .contains(currentToken.getTag())) {
+    private void ExpAddRD() throws IOException, LexerException,
+            ParserException {
+        if (isInFirstSet(Grammar.NonTerminal.OpAdd)) {
             OpAdd();
-            if (grammar.getFirsts(Grammar.NonTerminal.ExpMul)
-                    .contains(currentToken.getTag())) {
+            if (isInFirstSet(Grammar.NonTerminal.ExpMul)) {
                 ExpMul();
-            }
-            else {
-                if (grammar.getFirsts(Grammar.NonTerminal.ExpAddRD)
-                        .contains(currentToken.getTag())) {
+                if (isInFirstSet(Grammar.NonTerminal.ExpAddRD)) {
                     ExpAddRD();
                 }
-                else {
-                    System.out.println("ERROR!");
-                }
+            }
+            else {
+                throw new ParserException("Se esperaba Operando o Operador " +
+                        "Unario", currentToken.row, currentToken.col);
             }
         }
         else {
-            System.out.println("ERROR!");
+            throw new ParserException("Se esperaba Operador de suma o resta",
+                    currentToken.row, currentToken.col);
         }
     }
 
-    private void ExpMul() throws IOException, LexerException {
-        if (grammar.getFirsts(Grammar.NonTerminal.ExpUn)
-                .contains(currentToken.getTag())) {
+    private void ExpMul() throws IOException, LexerException, ParserException {
+        if (isInFirstSet(Grammar.NonTerminal.ExpUn)) {
             ExpUn();
-            if (grammar.getFirsts(Grammar.NonTerminal.ExpMulRD)
-                    .contains(currentToken.getTag())) {
+            if (isInFirstSet(Grammar.NonTerminal.ExpMulRD)) {
                 ExpMulRD();
             }
         }
         else {
-            System.out.println("ERROR!");
+            throw new ParserException("Se esperaba Operando o Operador Unario",
+                    currentToken.row, currentToken.col);
         }
     }
 
-    private void ExpMulRD() throws IOException, LexerException {
-        if (grammar.getFirsts(Grammar.NonTerminal.OpMul)
-                .contains(currentToken.getTag())) {
+    private void ExpMulRD() throws IOException, LexerException,
+            ParserException {
+        if (isInFirstSet(Grammar.NonTerminal.OpMul)) {
             OpMul();
-            if (grammar.getFirsts(Grammar.NonTerminal.ExpUn)
-                    .contains(currentToken.getTag())) {
+            if (isInFirstSet(Grammar.NonTerminal.ExpUn)) {
                 ExpUn();
-            }
-            else {
-                if (grammar.getFirsts(Grammar.NonTerminal.ExpMulRD)
-                        .contains(currentToken.getTag())) {
+                if (isInFirstSet(Grammar.NonTerminal.ExpMulRD)) {
                     ExpMulRD();
                 }
-                else {
-                    System.out.println("ERROR!");
-                }
+            }
+            else {
+                throw new ParserException("Se esperaba Operando o" +
+                        " Operador Unario", currentToken.row, currentToken.col);
             }
         }
         else {
-            System.out.println("ERROR!");
+            throw new ParserException("Se esperaba Operador de" +
+                    " multiplicación, división o resto", currentToken.row,
+                    currentToken.col);
         }
     }
 
-    private void ExpUn() throws IOException, LexerException {
-        if (grammar.getFirsts(Grammar.NonTerminal.OpUnario)
-                .contains(currentToken.getTag())) {
+    private void ExpUn() throws IOException, LexerException, ParserException {
+        if (isInFirstSet(Grammar.NonTerminal.OpUnario)) {
             OpUnario();
-            if (grammar.getFirsts(Grammar.NonTerminal.ExpUn)
-                    .contains(currentToken.getTag())) {
+            if (isInFirstSet(Grammar.NonTerminal.ExpUn)) {
                 ExpUn();
             }
             else {
-                System.out.println("ERROR!");
+                throw new ParserException("Se esperaba Operando o" +
+                        " Operador Unario", currentToken.row, currentToken.col);
             }
         }
         else {
-            if (grammar.getFirsts(Grammar.NonTerminal.Operando)
-                    .contains(currentToken.getTag())) {
+            if (isInFirstSet(Grammar.NonTerminal.Operando)) {
                 Operando();
             }
             else {
-                System.out.println("ERROR!");
+                throw new ParserException("Se esperaba Operando o Operador " +
+                        "Unario", currentToken.row, currentToken.col);
             }
         }
     }
 
-    private void OpIgual() throws IOException, LexerException {
+    private void OpIgual() throws IOException, LexerException, ParserException {
         match(new String[]{"==","!="});
     }
 
-    private void OpCompuesto() throws IOException, LexerException {
+    private void OpCompuesto() throws IOException, LexerException,
+            ParserException {
         match(new String[]{"<",">","<=",">="});
     }
 
-    private void OpAdd() throws IOException, LexerException {
+    private void OpAdd() throws IOException, LexerException, ParserException {
         match(new String[]{"+","-"});
     }
-    private void OpUnario() throws IOException, LexerException {
+    private void OpUnario() throws IOException, LexerException,
+            ParserException {
         match(new String[]{"+","-","!"});
     }
 
-    private void OpMul() throws IOException, LexerException {
+    private void OpMul() throws IOException, LexerException, ParserException {
         match(new String[]{"*","/","%"});
     }
-    private void Operando() throws IOException, LexerException {
-        if (grammar.getFirsts(Grammar.NonTerminal.Literal)
-                .contains(currentToken.getTag())) {
+    private void Operando() throws IOException, LexerException,
+            ParserException {
+        if (isInFirstSet(Grammar.NonTerminal.Literal)) {
             Literal();
         }
         else {
-            if (grammar.getFirsts(Grammar.NonTerminal.Primario)
-                    .contains(currentToken.getTag())) {
+            if (isInFirstSet(Grammar.NonTerminal.Primario)) {
                 Primario();
-                if (grammar.getFirsts(Grammar.NonTerminal.Encadenado)
-                        .contains(currentToken.getTag())) {
+                if (isInFirstSet(Grammar.NonTerminal.Encadenado)) {
                     Encadenado();
                 }
             }
             else {
-                System.out.println("ERROR!");
+                throw new ParserException("Se esperaba Literal o alguno de" +
+                        " los siguientes tokens: \"(\", \"self\", \"id\"," +
+                        " \"idClase\", \"new\"", currentToken.row,
+                        currentToken.col);
             }
         }
     }
-    private void Literal() throws IOException, LexerException {
-        match(new String[]{"nil","true","false","intLiteral","stringLiteral",
-                "charLiteral"});
+    private void Literal() throws IOException, LexerException, ParserException {
+        match(new String[]{"nil","true","false","NUM","STRING",
+                "CHAR"});
     }
-    private void Primario() throws IOException, LexerException {
-        if (grammar.getFirsts(Grammar.NonTerminal.ExprPar)
-                .contains(currentToken.getTag())) {
+    private void Primario() throws IOException, LexerException,
+            ParserException {
+        if (isInFirstSet(Grammar.NonTerminal.ExprPar)) {
             ExprPar();
         }
         else {
-            if (grammar.getFirsts(Grammar.NonTerminal.AccesoSelf)
-                    .contains(currentToken.getTag())) {
+            if (isInFirstSet(Grammar.NonTerminal.AccesoSelf)) {
                 AccesoSelf();
             } else {
-                if (grammar.getFirsts(Grammar.NonTerminal.AccesoVar)
-                        .contains(currentToken.getTag())) {
-                    AccesoVar();
+                if (isInFirstSet(Grammar.NonTerminal.VarOMet)) {
+                    VarOMet();
                 } else {
-                    if (grammar.getFirsts(Grammar.NonTerminal.LlamadaMet)
-                            .contains(currentToken.getTag())) {
-                        LlamadaMet();
+                    if (isInFirstSet(Grammar.NonTerminal.LlamadaMetEst)) {
+                        LlamadaMetEst();
                     } else {
-                        if (grammar.getFirsts(Grammar.NonTerminal.LlamadaMetEst)
-                                .contains(currentToken.getTag())) {
-                            LlamadaMetEst();
+                        if (isInFirstSet(Grammar.NonTerminal.LlamadaConst)) {
+                            LlamadaConst();
                         } else {
-                            if (grammar.getFirsts(
-                                            Grammar.NonTerminal.LlamadaConst)
-                                    .contains(currentToken.getTag())) {
-                                LLamadaConst();
-                            } else {
-                                System.out.println("ERROR!");
-                            }
+                            throw new ParserException("Se esperaba alguno de" +
+                                    " los siguientes tokens: \"(\", \"self\"," +
+                                    " \"id\", \"idClase\", \"new\"",
+                                    currentToken.row, currentToken.col);
                         }
                     }
                 }
@@ -1063,123 +1110,173 @@ public class Parser {
         }
     }
 
-    private void ExprPar() throws IOException, LexerException {
+    private void ExprPar() throws IOException, LexerException, ParserException {
         match("(");
-        if (grammar.getFirsts(Grammar.NonTerminal.Expresion)
-                .contains(currentToken.getTag())) {
+        if (isInFirstSet(Grammar.NonTerminal.Expresion)) {
             Expresion();
             match(")");
-            if (grammar.getFirsts(Grammar.NonTerminal.Encadenado)
-                    .contains(currentToken.getTag())) {
+            if (isInFirstSet(Grammar.NonTerminal.Encadenado)) {
                 Encadenado();
             }
         }
         else {
-            System.out.println("ERROR!");
+            throw new ParserException("Se esperaba Expresión",
+                    currentToken.row, currentToken.col);
         }
     }
 
-    private void AccesoSelf() throws IOException, LexerException {
+    private void AccesoSelf() throws IOException, LexerException,
+            ParserException {
         match("self");
-        if (grammar.getFirsts(Grammar.NonTerminal.Encadenado)
-                .contains(currentToken.getTag())) {
+        if (isInFirstSet(Grammar.NonTerminal.Encadenado)) {
             Encadenado();
         }
     }
 
-    private void AccesoVar() throws IOException, LexerException {
-        match("id");
-        if (grammar.getFirsts(Grammar.NonTerminal.Encadenado)
-                .contains(currentToken.getTag())) {
-            Encadenado();
-        }
-    }
-
-    private void LlamadaMet() throws IOException, LexerException {
-        match("id");
-        if (grammar.getFirsts(Grammar.NonTerminal.ArgsActuales)
-                .contains(currentToken.getTag())) {
-            ArgsActuales();
-            if (grammar.getFirsts(Grammar.NonTerminal.Encadenado)
-                    .contains(currentToken.getTag())) {
-                Encadenado();
-            }
-        }
-        else{
-            System.out.println("ERROR!");
-        }
-    }
-    private void LlamadaMetEst() throws IOException, LexerException {
-        match("idClase");
-        match(".");
-        if (grammar.getFirsts(Grammar.NonTerminal.LlamadaMet)
-                .contains(currentToken.getTag())) {
-            LlamadaMet();
-            if (grammar.getFirsts(Grammar.NonTerminal.Encadenado)
-                    .contains(currentToken.getTag())) {
-                Encadenado();
-            }
-        }
-        else{
-            System.out.println("ERROR!");
-        }
-    }
-
-    private void LLamadaConst() throws IOException, LexerException {
-        match("new");
-        if (grammar.getFirsts(Grammar.NonTerminal.LlamadaConst_1)
-                .contains(currentToken.getTag())) {
-            LLamadaConst_1();
+    private void VarOMet() throws IOException, LexerException, ParserException {
+        match("ID");
+        if (isInFirstSet(Grammar.NonTerminal.VarOMet_1)) {
+            VarOMet_1();
         }
         else {
-            System.out.println("ERROR!");
+            throw new ParserException("Se esperaba \".\", \"(\" o \"[\"",
+                    currentToken.row, currentToken.col);
+
         }
     }
 
-    private void LLamadaConst_1() throws IOException, LexerException {
-        if (grammar.getFirsts(Grammar.NonTerminal.TipoPrimitivo)
+    private void VarOMet_1() throws IOException, LexerException,
+            ParserException {
+        if (grammar.getFollows(Grammar.NonTerminal.VarOMet_1)
                 .contains(currentToken.getTag())) {
+            ;
+        }
+        else {
+            if (isInFirstSet(Grammar.NonTerminal.Encadenado)) {
+                Encadenado();
+            }
+            else {
+                if (isInFirstSet(Grammar.NonTerminal.ArgsActuales)) {
+                    ArgsActuales();
+                    if (isInFirstSet(Grammar.NonTerminal.Encadenado)) {
+                        Encadenado();
+                    }
+                }
+                else {
+                    if (Objects.equals(currentToken.getTag(), "[")){
+                        match("[");
+                        if (isInFirstSet(Grammar.NonTerminal.Expresion)) {
+                            Expresion();
+                        }
+                        match("]");
+                    }
+                    else {
+                        throw new ParserException("Se esperaba \".\", \"(\"" +
+                                "o \"[\"", currentToken.row, currentToken.col);
+                    }
+                }
+            }
+        }
+    }
+
+    /* Sin usar. Reemplazado por método VarOMet
+    private void AccesoVar() throws IOException, LexerException {
+        match("ID");
+        if (isInFirstSet(Grammar.NonTerminal.Encadenado)) {
+            Encadenado();
+        }
+    }
+    */
+    private void LlamadaMet() throws IOException, LexerException,
+            ParserException {
+        match("ID");
+        if (isInFirstSet(Grammar.NonTerminal.ArgsActuales)) {
+            ArgsActuales();
+            if (isInFirstSet(Grammar.NonTerminal.Encadenado)) {
+                Encadenado();
+            }
+        }
+        else{
+            throw new ParserException("Se esperaba \"(\"",
+                    currentToken.row, currentToken.col);
+        }
+    }
+
+    private void LlamadaMetEst() throws IOException, LexerException,
+            ParserException {
+        match("CLASSID");
+        match(".");
+        if (isInFirstSet(Grammar.NonTerminal.LlamadaMet)) {
+            LlamadaMet();
+            if (isInFirstSet(Grammar.NonTerminal.Encadenado)) {
+                Encadenado();
+            }
+        }
+        else{
+            throw new ParserException("Se esperaba Identificador de Método" +
+                    " Estático", currentToken.row, currentToken.col);
+        }
+    }
+
+    private void LlamadaConst() throws IOException, LexerException,
+            ParserException {
+        match("new");
+        if (isInFirstSet(Grammar.NonTerminal.LlamadaConst_1)) {
+            LlamadaConst_1();
+        }
+        else {
+            throw new ParserException("Se esperaba Identificador de Clase o" +
+                    " Tipo Primitivo", currentToken.row, currentToken.col);
+        }
+    }
+
+    private void LlamadaConst_1() throws IOException, LexerException,
+            ParserException {
+        if (isInFirstSet(Grammar.NonTerminal.TipoPrimitivo)) {
             TipoPrimitivo();
             match("[");
-            if (grammar.getFirsts(Grammar.NonTerminal.Expresion)
-                    .contains(currentToken.getTag())) {
+            if (isInFirstSet(Grammar.NonTerminal.Expresion)) {
                 Expresion();
                 match("]");
             }
             else {
-                System.out.println("ERROR!");
+                throw new ParserException("Se esperaba Expresión",
+                        currentToken.row, currentToken.col);
             }
         }
         else {
-            match("idClase");
-            if (grammar.getFirsts(Grammar.NonTerminal.ArgsActuales)
-                    .contains(currentToken.getTag())) {
-                ArgsActuales();
-                if (grammar.getFirsts(Grammar.NonTerminal.Encadenado)
-                        .contains(currentToken.getTag())) {
-                    Encadenado();
+            if (Objects.equals(currentToken.getTag(), "CLASSID")) {
+                match("CLASSID");
+                if (isInFirstSet(Grammar.NonTerminal.ArgsActuales)) {
+                    ArgsActuales();
+                    if (isInFirstSet(Grammar.NonTerminal.Encadenado)) {
+                        Encadenado();
+                    }
                 }
             }
             else {
-                System.out.println("ERROR!");
+                throw new ParserException("Se esperaba Tipo Primitivo o" +
+                        " Identificador de Clase", currentToken.row,
+                        currentToken.col);
             }
         }
     }
 
-    private void ArgsActuales() throws IOException, LexerException {
+    private void ArgsActuales() throws IOException, LexerException,
+            ParserException {
         match("(");
-        if (grammar.getFirsts(Grammar.NonTerminal.ArgsActuales_1)
-                .contains(currentToken.getTag())) {
+        if (isInFirstSet(Grammar.NonTerminal.ArgsActuales_1)) {
             ArgsActuales_1();
         }
         else {
-            System.out.println("ERROR!");
+            throw new ParserException("Se esperaba Lista de Expresiones o" +
+                    " \"(\"", currentToken.row, currentToken.col);
         }
     }
 
-    private void ArgsActuales_1() throws IOException, LexerException {
-        if (grammar.getFirsts(Grammar.NonTerminal.ListaExpresiones)
-                .contains(currentToken.getTag())) {
+    private void ArgsActuales_1() throws IOException, LexerException,
+            ParserException {
+        if (isInFirstSet(Grammar.NonTerminal.ListaExpresiones)) {
             ListaExpresiones();
             match(")");
         }
@@ -1188,81 +1285,77 @@ public class Parser {
         }
 
     }
-
-    private void ListaExpresiones() throws IOException, LexerException {
-        if (grammar.getFirsts(Grammar.NonTerminal.Expresion)
-                .contains(currentToken.getTag())) {
+    private void ListaExpresiones() throws IOException, LexerException,
+            ParserException {
+        if (isInFirstSet(Grammar.NonTerminal.Expresion)) {
             Expresion();
             if (Objects.equals(currentToken.getTag(), ",")) {
                 match(",");
-                if (grammar.getFirsts(Grammar.NonTerminal.ListaExpresiones)
-                        .contains(currentToken.getTag())) {
+                if (isInFirstSet(Grammar.NonTerminal.ListaExpresiones)) {
                     ListaExpresiones();
                 }
                 else {
-                    System.out.println("ERROR!");
+                    throw new ParserException("Se esperaba Expresión",
+                            currentToken.row, currentToken.col);
                 }
             }
-            else {
-                System.out.println("ERROR!");
-            }
+        }
+        else {
+            throw new ParserException("Se esperaba Expresión", currentToken.row,
+                    currentToken.col);
         }
     }
-    private void Encadenado() throws IOException, LexerException {
+    private void Encadenado() throws IOException, LexerException,
+            ParserException {
         match(".");
-        if (grammar.getFirsts(Grammar.NonTerminal.Encadenado_1)
-                .contains(currentToken.getTag())) {
+        if (isInFirstSet(Grammar.NonTerminal.Encadenado_1)) {
             Encadenado_1();
         }
         else {
-            System.out.println("ERROR!");
+            throw new ParserException("Se esperaba Identificador de Variable" +
+                    " o de Método ", currentToken.row, currentToken.col);
         }
     }
-    private void Encadenado_1() throws IOException, LexerException {
-        if (grammar.getFirsts(Grammar.NonTerminal.LlamadaMetEncadenado)
-                .contains(currentToken.getTag())) {
-            LlamadaMetEncadenado();
+    private void Encadenado_1() throws IOException, LexerException,
+            ParserException {
+        match("ID");
+        if (isInFirstSet(Grammar.NonTerminal.VarOMet_1)) {
+            VarOMet_1();
         }
         else {
-            if (grammar.getFirsts(Grammar.NonTerminal.AccVarEncadenado)
-                    .contains(currentToken.getTag())) {
-                AccVarEncadenado();
-            }
-            else {
-                System.out.println("ERROR!");
-            }
+            throw new ParserException("Se esperaba \".\", \"(\" o \"[\"",
+                    currentToken.row, currentToken.col);
         }
     }
 
-    private void LlamadaMetEncadenado() throws IOException, LexerException {
-        match("id");
-        if (grammar.getFirsts(Grammar.NonTerminal.ArgsActuales)
-                .contains(currentToken.getTag())) {
+    /* Deprecated
+    private void LlamadaMetEncadenado() throws IOException, LexerException, ParserException {
+        match("ID");
+        if (isInFirstSet(Grammar.NonTerminal.ArgsActuales)) {
             ArgsActuales();
-            if (grammar.getFirsts(Grammar.NonTerminal.Encadenado)
-                    .contains(currentToken.getTag())) {
+            if (isInFirstSet(Grammar.NonTerminal.Encadenado)) {
                 Encadenado();
             }
         }
         else {
-            System.out.println("ERROR!");
+            throw new ParserException("Se esperaba \"(\"",
+                    currentToken.row, currentToken.col);
         }
     }
 
-    private void AccVarEncadenado() throws IOException, LexerException {
-        match("id");
-        if (grammar.getFirsts(Grammar.NonTerminal.AccVarEncadenado_1)
-                .contains(currentToken.getTag())) {
+    private void AccVarEncadenado() throws IOException, LexerException, ParserException {
+        match("ID");
+        if (isInFirstSet(Grammar.NonTerminal.AccVarEncadenado_1)) {
             AccVarEncadenado_1();
         }
         else {
-            System.out.println("ERROR!");
+            throw new ParserException("Se esperaba \".\" o \"[\"",
+                    currentToken.row, currentToken.col);
         }
     }
 
-    private void AccVarEncadenado_1() throws IOException, LexerException {
-        if (grammar.getFirsts(Grammar.NonTerminal.Encadenado)
-                .contains(currentToken.getTag())) {
+    private void AccVarEncadenado_1() throws IOException, LexerException, ParserException {
+        if (isInFirstSet(Grammar.NonTerminal.Encadenado)) {
             Encadenado();
         }
         else {
@@ -1272,19 +1365,16 @@ public class Parser {
             }
             else {
                 match("[");
-                if (grammar.getFirsts(Grammar.NonTerminal.Expresion)
-                        .contains(currentToken.getTag())) {
+                if (isInFirstSet(Grammar.NonTerminal.Expresion)) {
                     Expresion();
                     match("]");
                 }
                 else {
-                    System.out.println("ERROR!");
+                    throw new ParserException("Se esperaba Expresión o \".\"",
+                            currentToken.row, currentToken.col);
                 }
             }
         }
     }
-
-
+    */
 }
-
-

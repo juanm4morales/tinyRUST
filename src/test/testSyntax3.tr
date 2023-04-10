@@ -1,0 +1,11 @@
+class A: H{
+    I32:i;
+    I32:j;
+    create(){
+        i=0;j=0;
+    }
+    fn print(I32:n) -> void {
+        (IO.out_i32(i)) // Falta ;
+        (IO.out_i32(j));
+    }
+}

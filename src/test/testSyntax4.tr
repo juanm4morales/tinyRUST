@@ -1,11 +1,10 @@
-class Fibonacci {
-    I32: suma;
-    I32: i,j;
-    fn sucesion_fib(I32: n)-> I32{
+class Clase {
+    I32: x;
+    fn metodo(I32: n)-> I32{
         i=0; j=0; suma=0;
         while (i<=n){
             if (i==0){
-                (imprimo_numero(i));
+                (imprimo_numero(self. ));
                 (imprimo_sucesion(suma));
                 }
             else if(i==1){
@@ -23,9 +22,7 @@ class Fibonacci {
     }
 
     create(){
-        i=0;
-        j=0;
-        suma=0;
+        x=0;
     }
     fn imprimo_numero(I32: num) -> void{
         (IO.out_str("f_"));
@@ -44,5 +41,4 @@ fn main(){
     fib = new Fibonacci();
     n = IO.in_i32();
     (fib.sucesion_fib(n));
-
 }

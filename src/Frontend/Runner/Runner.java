@@ -1,9 +1,11 @@
 package Frontend.Runner;
 
-import Frontend.Lexer.FileReaderWriter;
+import Frontend.FileReaderWriter;
 import Frontend.Lexer.Lexer;
 import Frontend.Lexer.LexerException;
 import Frontend.Lexer.Token;
+import Frontend.Parser.Parser;
+import Frontend.Parser.ParserException;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
@@ -26,9 +28,8 @@ public class Runner {
     }
 
     /**
-     * run() lee un archivo fuente e instancia al Lexer. Luego coloca en
-     * el arreglo "tokens" todos los tokens del sourceCode hasta leer EOF
-     * o hasta que se produzca un error.
+     * run() lee un archivo fuente e instancia al Parser. Luego
+     * ejecuta el analizador sintáctico mediante el método parse()
      */
     public void run(){
         BufferedReader sourceCode = null;
@@ -39,19 +40,18 @@ public class Runner {
             System.err.println("El archivo " + path + " no existe");
             return;
         }
-        Lexer lexer = new Lexer(sourceCode);
+        Parser parser = new Parser(sourceCode);
         try {
-            Token token;
-            while (!lexer.EOF){
-                token = lexer.getNextToken();
-                if (token != null){
-                    tokens.add(token);
-                }
-            }
-        } catch (IOException | LexerException e) {
+            parser.parse();
+        }
+        catch (LexerException | ParserException | IOException e){
             error = true;
             System.err.println(e.getMessage());
         }
+        if (!error){
+            System.out.println("CORRECTO: ANALISIS SINTÁCTICO");
+        }
+
     }
 
     /**
@@ -81,6 +81,5 @@ public class Runner {
         }
         Runner runner = new Runner(path);
         runner.run();
-        runner.printTokens();
     }
 }
