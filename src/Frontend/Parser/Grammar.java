@@ -110,7 +110,7 @@ public class Grammar {
                 Arrays.asList("{")));
         first.put(NonTerminal.BloqueMetodo_1, new HashSet<>(
                 Arrays.asList("Bool", "I32", "Str", "Char", "CLASSID", "Array",
-                        "if", ";", "ID", "(", "while", "{", "return")));
+                        "if", ";", "ID", "(", "while", "{", "return", "}")));
         first.put(NonTerminal.BloqueMetodo_2, new HashSet<>(
                 Arrays.asList("if", ";", "ID", "(", "while", "{", "return",
                         "}")));

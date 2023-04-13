@@ -4,7 +4,6 @@ import Frontend.Lexer.Lexer;
 import Frontend.Lexer.LexerException;
 import Frontend.Lexer.Token;
 
-import java.beans.Expression;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.Arrays;
@@ -123,7 +122,6 @@ public class Parser {
                         " un método Main", currentToken.row, currentToken.col);
             }
         }
-
     }
     private void ClaseR() throws IOException, LexerException, ParserException {
         if (isInFirstSet(Grammar.NonTerminal.Clase)){
@@ -283,8 +281,6 @@ public class Parser {
             throw new ParserException("Se esperaba " +
                     "\"(\"", currentToken.row, currentToken.col);
         }
-
-
     }
 
     private void Metodo() throws IOException, LexerException, ParserException {
@@ -492,10 +488,10 @@ public class Parser {
                 BloqueMetodo_2();
             }
             else {
-                throw new ParserException("Se esperaba bucle While," +
-                        " estructura condicional, asignación, sentencia de" +
-                        " retorno, bloque, sentencia simple, \";\" o \"}\""
-                        , currentToken.row, currentToken.col);
+                throw new ParserException("Se esperaba bucle While, " +
+                        "estructura condicional, asignación, sentencia de" +
+                        " retorno, bloque, sentencia simple, \";\" o \"}\"",
+                        currentToken.row, currentToken.col);
             }
         }
         else {
@@ -504,10 +500,15 @@ public class Parser {
                 match("}");
             }
             else {
-                throw new ParserException("Se esperaba bucle While "+
-                        ",estructura condicional, asignación, sentencia de" +
-                                " retorno, bloque, sentencia simple, o \";\"",
-                        currentToken.row, currentToken.col);
+                if (Objects.equals(currentToken.getTag(), "}")){
+                    match("}");
+                }
+                else {
+                    throw new ParserException("Se esperaba bucle While,"+
+                            " estructura condicional, asignación, sentencia de" +
+                            " retorno, bloque, sentencia simple, \";\" o \"}\"",
+                            currentToken.row, currentToken.col);
+                }
             }
         }
     }
@@ -515,7 +516,15 @@ public class Parser {
             ParserException {
         if (isInFirstSet(Grammar.NonTerminal.SentenciaR)){
             SentenciaR();
-            match("}");
+            if (Objects.equals(currentToken.getTag(), "}")){
+                match("}");
+            }
+            else {
+                throw new ParserException("Se esperaba bucle While, "+
+                        "estructura condicional, asignación, sentencia de" +
+                        " retorno, bloque, sentencia simple, \";\" o \"}\"",
+                        currentToken.row, currentToken.col);
+            }
         }
         else {
             match("}");
@@ -544,7 +553,7 @@ public class Parser {
             }
         }
         else {
-            throw new ParserException("Se esperaba bucle While estructura" +
+            throw new ParserException("Se esperaba bucle While, estructura" +
                     " condicional, asignación, sentencia de retorno, bloque," +
                     " sentencia simple, o \";\"",
                     currentToken.row, currentToken.col);
