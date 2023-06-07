@@ -22,8 +22,8 @@ public class Lexer{
     public boolean EOF;                         // Llegó al final del archivo?
 
     /**
-     * Constructor de la clase Lexer
-     * @param sourceCode El código fuente
+     * Constructor de la clase Lexer.
+     * @param sourceCode El código fuente.
      */
     public Lexer(BufferedReader sourceCode){
         this.row=1;
@@ -56,19 +56,21 @@ public class Lexer{
         words.put("Array","Array");
         words.put("main","main");
     }
-    // Estados del autómata finito usado para reconocer lexemas y generar tokens
+
+    /**
+     * Estados del autómata finito usado para reconocer lexemas y generar tokens
+     */
     private enum State{
         REM, MULT, ADD, SUBS, INH, LPAREN, RPAREN, LBRACE, RBRACE, LBRACKET,
-        RBRACKET, DOT, SEMMI, COMMA, EXCL, L, LE, G, GE, AS, EQ, AND, AND1,
+        RBRACKET, DOT, SEMMI, COMMA, EXCL, L, LE, G, GE, AS, EQ, NEQ, AND, AND1,
         OR, OR1, RETT, STRO, STR_BS, STR, CHARO, CHAR0, CHAR1, CHAR2, CHAR,
         ID, NUM, ERROR_ID, START, DIV, SC, MCO, MCS, CLASSID, ERROR_SYM,
         ERROR_USTR, ERROR_UMC, ERROR_UCHAR, ERROR_ICHAR1, ERROR_ICHAR2,
         ERROR_IJSTR, ERROR_IJCHAR
     }
     /**
-     * Establece el comiendo de un "posible" token
+     * Establece el comienzo de un "posible" token
      */
-
     private int nextChar(){
         try {
             return sourceCode.read();
@@ -76,6 +78,7 @@ public class Lexer{
             throw new RuntimeException(e);
         }
     }
+
     private void setRowColToken(){
         rowT=row;
         colT=col;
@@ -199,7 +202,7 @@ public class Lexer{
                             break;
                         case '!':
                             dfa_state=State.EXCL;
-                            canRead=false;
+                            //canRead=false;
                             break;
                         case ',':
                             dfa_state=State.COMMA;
@@ -449,6 +452,8 @@ public class Lexer{
                 break;
             case EQ: // ACEPTADOR
                 return new Token(lexeme.toString(),lexeme.toString(),rowT,colT);
+            case NEQ: // ACEPTADOR
+                return new Token(lexeme.toString(),lexeme.toString(),rowT,colT);
             case AND1:
                 if (currentChar=='&'){
                     dfa_state=State.AND;
@@ -523,7 +528,7 @@ public class Lexer{
                     else{
                         canRead=false;
                         return new Token(String.valueOf(lexeme.charAt(0)),
-                            lexeme.toString(),rowT,colT);
+                                String.valueOf(lexeme.charAt(0)),rowT,colT);
                     }
                 }
                 break;
@@ -563,8 +568,21 @@ public class Lexer{
                         dfa_state = State.MCO;
                 }
                 break;
+
+            case EXCL:
+                if (currentChar=='='){
+                    dfa_state=State.NEQ;
+                    canRead=false;
+                }
+                else{
+                    canRead=false;
+                    return new Token(String.valueOf(lexeme.charAt(0)),
+                            String.valueOf(lexeme.charAt(0)),rowT,colT);
+                }
+                break;
+
             // ACEPTADORES
-            case EXCL: case COMMA: case SEMMI: case DOT: case LBRACE:
+            case COMMA: case SEMMI: case DOT: case LBRACE:
             case RBRACE: case LBRACKET: case RBRACKET: case LPAREN:
             case RPAREN: case INH: case ADD: case MULT: case REM:
                 return new Token(lexeme.toString(),lexeme.toString(),rowT,colT);

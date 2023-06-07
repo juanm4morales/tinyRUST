@@ -1,8 +1,14 @@
 package Frontend.Parser;
 
+import AST.*;
 import Frontend.Lexer.Lexer;
 import Frontend.Lexer.LexerException;
 import Frontend.Lexer.Token;
+import SymbolTable.*;
+import DataType.ArrayType;
+import DataType.PrimitiveType;
+import DataType.ReferenceType;
+import DataType.Type;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -11,13 +17,18 @@ import java.util.Objects;
 
 /**
  * Esta clase representa al analizador sintáctico descendente predictivo recursivo
- * junto a sus atributos y métodos necesarios para llevar a cabo su tarea
+ * junto a sus atributos y métodos necesarios para llevar a cabo su tarea.
+ * También realiza chequeos semánticos de las declaraciones de variables, clases
+ * y métodos. Construye la tabla de símbolos del programa.
  */
 public class Parser {
     private Token currentToken;             // token actual
     private final Lexer lexer;              // Objeto Lexer (analizador léxico)
     private final Grammar grammar;          // Objeto Grammar (No terminales, primeros y siguientes
     private boolean error;                  // ha ocurrido un error
+    // Tabla de símbolos
+    private static final SymbolTable symbolTable = new SymbolTable();
+    private static final AST ast = new AST();
 
     public Parser(BufferedReader sourceCode) {
         lexer = new Lexer(sourceCode);
@@ -30,22 +41,29 @@ public class Parser {
      * @throws LexerException
      * @throws ParserException
      */
-    public void parse() throws IOException, LexerException, ParserException {
+    public void parse() throws IOException, LexerException, ParserException,
+            SemanticException {
         currentToken = lexer.getNextToken();
         Start();
+        symbolTable.consolidateST();
+        ast.sentenceCheck(symbolTable);
     }
 
     /**
      * Verifica si el token actual "matchea" con el terminal
+     *
      * @param tag
+     * @return
      * @throws IOException
      * @throws LexerException
      * @throws ParserException
      */
-    private void match(String tag) throws IOException, LexerException,
+    private Token match(String tag) throws IOException, LexerException,
             ParserException {
+        Token token = currentToken;
         if (Objects.equals(currentToken.getTag(), tag)){
             currentToken = lexer.getNextToken();
+            return token;
         }
         else {
             throw new ParserException("Se esperaba \"" + tag +"\"",
@@ -61,12 +79,13 @@ public class Parser {
      * @throws LexerException
      * @throws ParserException
      */
-    private String match(String[] tags) throws IOException, LexerException,
+    private Token match(String[] tags) throws IOException, LexerException,
             ParserException {
+        Token token = currentToken;
         for (String tag : tags) {
             if (Objects.equals(currentToken.getTag(), tag)) {
                 currentToken = lexer.getNextToken();
-                return tag;
+                return token;
             }
         }
         throw new ParserException("Se esperaba alguno de los siguientes" +
@@ -92,11 +111,14 @@ public class Parser {
     Menos en los métodos que tienen como sufijo la palbra "Right", estos métodos
     son para simplificar el código,
      */
-    private void Start() throws IOException, LexerException, ParserException {
+    private void Start() throws IOException, LexerException, ParserException,
+            SemanticException {
+
         if (isInFirstSet(Grammar.NonTerminal.ClaseR)){
             ClaseR();
             if (isInFirstSet(Grammar.NonTerminal.Main)){
-                Main();
+                MethodNode main = Main();
+                ast.setMain(main);
                 if (!Objects.equals(currentToken.getTag(), "EOF")){
                     throw new ParserException("No puede" +
                             " haber nada después del método Main",
@@ -110,7 +132,8 @@ public class Parser {
         }
         else {
             if (isInFirstSet(Grammar.NonTerminal.Main)){
-                Main();
+                MethodNode main = Main();
+                ast.setMain(main);
                 if (!Objects.equals(currentToken.getTag(), "EOF")){
                     throw new ParserException("No puede" +
                             " haber nada después del método Main",
@@ -123,25 +146,34 @@ public class Parser {
             }
         }
     }
-    private void ClaseR() throws IOException, LexerException, ParserException {
+    private void ClaseR() throws IOException, LexerException, ParserException,
+            SemanticException {
         if (isInFirstSet(Grammar.NonTerminal.Clase)){
-            Clase();
+            ClassNode classN = Clase();
+            ast.addClass(classN);
             if (isInFirstSet(Grammar.NonTerminal.ClaseR)){
                 ClaseR();
             }
         }
         else {
-            throw new ParserException("Se esperaba" +
+            throw new ParserException("Se esperaba declaración de una" +
                     " una clase", currentToken.row, currentToken.col);
         }
     }
-    private void Main() throws IOException, LexerException, ParserException {
+    private MethodNode Main() throws IOException, LexerException, ParserException,
+            SemanticException {
         match("fn");
         match("main");
         match("(");
         match(")");
+        symbolTable.setCurrentClass((String) null);
+        symbolTable.setCurrentMethod(symbolTable.getMain());
+        MethodNode main = new MethodNode();
+        main.setName("main");
         if (isInFirstSet(Grammar.NonTerminal.BloqueMetodo)){
-            BloqueMetodo();
+            BlockNode mainBlock = BloqueMetodo();
+            main.setBlock(mainBlock);
+            return main;
         }
         else{
             throw new ParserException("Se esperaba" +
@@ -149,84 +181,114 @@ public class Parser {
         }
 
     }
-    private void Clase() throws IOException, LexerException, ParserException {
+    private ClassNode Clase() throws IOException, LexerException, ParserException,
+            SemanticException {
         match("class");
+        String classId = currentToken.getLexeme();
+        Token token = currentToken;
         match("CLASSID");
+        ClassEntry c = new ClassEntry(classId, true);
+        c.setRowColDecl(token.row,token.col);
+        if (symbolTable.addClass(c)!=null) {
+            throw new SemanticException("La clase "+classId+" ya ha sido" +
+                    " declarada. Use otro identificador." , token.row, token.col);
+        }
+        symbolTable.setCurrentClass(c);
         if (isInFirstSet(Grammar.NonTerminal.Clase_1)){
-            Clase_1();
+            ClassNode classN = new ClassNode(token);
+            classN.setName(token.getLexeme());
+            Clase_1(classN);
+            return classN;
         }
         else{
             throw new ParserException("Se esperaba o \":\"" +
                     " o \"{\"", currentToken.row, currentToken.col);
         }
     }
-
-    private void Clase_1() throws IOException, LexerException, ParserException {
+    private void Clase_1(ClassNode classN) throws IOException, LexerException, ParserException,
+            SemanticException {
         if (isInFirstSet(Grammar.NonTerminal.Herencia)){
             Herencia();
-            Clase_1Right();
+            Clase_1Right(classN);
         }
         else {
-            Clase_1Right();
+            symbolTable.getCurrentClass().setInheritance("Object");
+            Clase_1Right(classN);
         }
     }
-    private void Clase_1Right() throws IOException, LexerException,
-            ParserException {
-        match("{");
-        if (isInFirstSet(Grammar.NonTerminal.Clase_2)){
-            Clase_2();
-        }
-        else {
-            throw new ParserException("Se esperaba un Atributo, Constructor," +
-                    " Método o \"}\"", currentToken.row, currentToken.col);
-        }
-    }
-    private void Clase_2() throws IOException, LexerException, ParserException {
-        if (isInFirstSet(Grammar.NonTerminal.MiembroR)) {
-            MiembroR();
-            match("}");
-        }
-        else {
-            match("}");
-        }
-    }
-
-    private void MiembroR() throws IOException, LexerException,
-            ParserException {
-        if (isInFirstSet(Grammar.NonTerminal.Miembro)){
-            Miembro();
-            if (isInFirstSet(Grammar.NonTerminal.MiembroR)){
-                MiembroR();
+    private void Clase_1Right(ClassNode classN) throws IOException, LexerException,
+            ParserException, SemanticException {
+        if (Objects.equals(currentToken.getTag(), "{")){
+            match("{");
+            if (isInFirstSet(Grammar.NonTerminal.Clase_2)){
+                Clase_2(classN);
+            }
+            else {
+                throw new ParserException("Se esperaba declaración de" +
+                        " declaración de atributo, Constructor, Método o \"}\"",
+                        currentToken.row, currentToken.col);
             }
         }
         else {
-            throw new ParserException("Se esperaba un Atributo, Constructor" +
-                    " o Método", currentToken.row, currentToken.col);
+            throw new ParserException("Se esperaba o \":\"" +
+                    " o \"{\"", currentToken.row, currentToken.col);
+        }
+    }
+    private void Clase_2(ClassNode classN) throws IOException, LexerException, ParserException,
+            SemanticException {
+        if (isInFirstSet(Grammar.NonTerminal.MiembroR)) {
+            MiembroR(classN);
+            match("}");
+        }
+        else {
+            match("}");
+        }
+    }
+
+    private void MiembroR(ClassNode classN) throws IOException, LexerException,
+            ParserException, SemanticException {
+        if (isInFirstSet(Grammar.NonTerminal.Miembro)){
+            Miembro(classN);
+            if (isInFirstSet(Grammar.NonTerminal.MiembroR)){
+                MiembroR(classN);
+            }
+        }
+        else {
+            throw new ParserException("Se esperaba un declaración de" +
+                    " atributo, Constructor o Método", currentToken.row,
+                    currentToken.col);
         }
     }
 
     private void Herencia() throws IOException, LexerException,
             ParserException {
         match(":");
+        String classId = currentToken.getLexeme();
+        Token token = currentToken;
         match("CLASSID");
+        symbolTable.getCurrentClass().setInheritance(classId);
+        symbolTable.getCurrentClass().setRowColIDecl(token.row, token.col);
     }
 
-    private void Miembro() throws IOException, LexerException, ParserException {
+    private void Miembro(ClassNode classN) throws IOException, LexerException, ParserException,
+            SemanticException {
         if (isInFirstSet(Grammar.NonTerminal.Atributo)){
             Atributo();
         }
         else {
             if (isInFirstSet(Grammar.NonTerminal.Constructor)){
-                Constructor();
+                MethodNode constructor = Constructor();
+                classN.setConstructor(constructor);
 
             }
             else {
                 if (isInFirstSet(Grammar.NonTerminal.Metodo)){
-                    Metodo();
+                    MethodNode method = Metodo();
+                    classN.addMethod(method);
                 }
                 else {
-                    throw new ParserException("Se esperaba un Atributo," +
-                            " Constructor o Método", currentToken.row,
+                    throw new ParserException("Se esperaba un declaración de "+
+                            "atributo, Constructor o Método", currentToken.row,
                             currentToken.col);
                 }
             }
@@ -234,22 +296,22 @@ public class Parser {
     }
 
     private void Atributo() throws IOException, LexerException,
-            ParserException {
+            ParserException, SemanticException {
         if (isInFirstSet(Grammar.NonTerminal.Visibilidad)){
             Visibilidad();
-            AtributoRight();
+            AtributoRight(true);
         }
         else {
-            AtributoRight();
+            AtributoRight(false);
         }
     }
-    private void AtributoRight() throws IOException, LexerException,
-            ParserException {
+    private void AtributoRight(boolean pub) throws IOException, LexerException,
+            ParserException, SemanticException {
         if (isInFirstSet(Grammar.NonTerminal.Tipo)){
-            Tipo();
+            Type type = Tipo();
             match(":");
             if (isInFirstSet(Grammar.NonTerminal.ListaDeclVar)){
-                ListaDeclVar();
+                ListaDeclVar(true, pub, type);
                 match(";");
             }
             else {
@@ -264,13 +326,21 @@ public class Parser {
         }
     }
 
-    private void Constructor() throws IOException, LexerException,
-            ParserException {
+    private MethodNode Constructor() throws IOException, LexerException,
+            ParserException, SemanticException {
         match("create");
+        ConstructorEntry constructorEntry = new ConstructorEntry(
+                symbolTable.getCurrentClass().getId());
+        symbolTable.getCurrentClass().setConstructor(constructorEntry);
+        symbolTable.setCurrentMethod(constructorEntry);
         if (isInFirstSet(Grammar.NonTerminal.ArgsFormales)){
             ArgsFormales();
-            if (isInFirstSet(Grammar.NonTerminal.Bloque)){
-                Bloque();
+            if (isInFirstSet(Grammar.NonTerminal.BloqueMetodo)){
+                MethodNode constructor = new MethodNode();
+                constructor.setName(symbolTable.getCurrentClass().getId());
+                BlockNode constBlock = BloqueMetodo();
+                constructor.setBlock(constBlock);
+                return constructor;
             }
             else {
                 throw new ParserException("Se esperaba \"{\"", currentToken.row,
@@ -283,145 +353,178 @@ public class Parser {
         }
     }
 
-    private void Metodo() throws IOException, LexerException, ParserException {
+    private MethodNode Metodo() throws IOException, LexerException, ParserException,
+            SemanticException {
         if (isInFirstSet(Grammar.NonTerminal.FormaMetodo)){
             FormaMetodo();
-            MetodoRight();
+            return MetodoRight(true);
         }
         else {
-            MetodoRight();
+            return MetodoRight(false);
         }
-
     }
-    private void MetodoRight() throws IOException, LexerException,
-            ParserException {
-        match("fn");
-        match("ID");
-        if (isInFirstSet(Grammar.NonTerminal.ArgsFormales)){
-            ArgsFormales();
-            match("->");
-            if (isInFirstSet(Grammar.NonTerminal.TipoMetodo)){
-                TipoMetodo();
-                if (isInFirstSet(Grammar.NonTerminal.BloqueMetodo)){
-                    BloqueMetodo();
+    private MethodNode MetodoRight(boolean isStatic) throws IOException, LexerException,
+            ParserException, SemanticException {
+        if (Objects.equals(currentToken.getTag(), "fn")){
+            match("fn");
+            String methodId = currentToken.getLexeme();
+            Token token = currentToken;
+            match("ID");
+            MethodEntry methodEntry = new MethodEntry(methodId, isStatic);
+            methodEntry.setToken(token);
+            if (symbolTable.getCurrentClass().addMethod(methodEntry, true)
+                    != null){
+                throw new SemanticException("El método "+methodId+" ya ha" +
+                        " sido declarado en la clase " +
+                        symbolTable.getCurrentClass().getId()+". Use otro" +
+                        " identificador de método.", token.row, token.col);
+            }
+            symbolTable.setCurrentMethod(methodEntry);
+            if (isInFirstSet(Grammar.NonTerminal.ArgsFormales)){
+                ArgsFormales();
+                match("->");
+                if (isInFirstSet(Grammar.NonTerminal.TipoMetodo)){
+                    Type returnType = TipoMetodo();
+                    methodEntry.setReturnType(returnType);
+                    if (isInFirstSet(Grammar.NonTerminal.BloqueMetodo)){
+                        MethodNode method = new MethodNode();
+                        method.setName(token.getLexeme());
+                        BlockNode methodBlock = BloqueMetodo();
+                        method.setBlock(methodBlock);
+                        return  method;
+                    }
+                    else {
+                        throw new ParserException("Se esperaba un bloque de" +
+                                " método", currentToken.row, currentToken.col);
+                    }
                 }
                 else {
-                    throw new ParserException("Se esperaba un bloque de" +
-                            " método", currentToken.row, currentToken.col);
+                    throw new ParserException("Se esperaba el tipo de retorno" +
+                            " del método", currentToken.row, currentToken.col);
                 }
             }
             else {
-                throw new ParserException("Se esperaba el tipo de retorno del" +
-                        " método", currentToken.row, currentToken.col);
+                throw new ParserException("Se esperaba \"(\"", currentToken.row,
+                        currentToken.col);
             }
         }
         else {
-            throw new ParserException("Se esperaba \"(\"", currentToken.row,
-                    currentToken.col);
+            throw new ParserException("Se esperaba declaración de método",
+                    currentToken.row, currentToken.col);
         }
     }
     private void ArgsFormales() throws IOException, LexerException,
-            ParserException {
+            ParserException, SemanticException {
         match("(");
         if (isInFirstSet(Grammar.NonTerminal.ArgsFormales_1)){
             ArgsFormales_1();
         }
         else {
-            throw new ParserException("Se esperaba un Tipo",
+            throw new ParserException("Se esperaba declaración de Tipo",
                     currentToken.row, currentToken.col);
         }
     }
 
     private void ArgsFormales_1() throws IOException, LexerException,
-            ParserException {
+            ParserException, SemanticException {
         if (isInFirstSet(Grammar.NonTerminal.ListaArgsFormales)){
             ListaArgsFormales();
             match(")");
         }
         else {
-            match(")");
+            if (Objects.equals(currentToken.getTag(), ")")){
+                match(")");
+            }
+            else {
+                throw new ParserException("Se esperaba argumento formal o" +
+                        " \")\"", currentToken.row, currentToken.col);
+            }
+
         }
     }
-
     private void ListaArgsFormales() throws IOException, LexerException,
-            ParserException {
+            ParserException, SemanticException {
         if (isInFirstSet(Grammar.NonTerminal.ArgFormal)){
             ArgFormal();
-            if (isInFirstSet(Grammar.NonTerminal.ListaArgsFormales_1)){
-                ListaArgsFormales_1();
-            }
-            else {
-                throw new ParserException("Se esperaba \",\"",
-                        currentToken.row, currentToken.col);
+            if (Objects.equals(currentToken.getTag(), ",")){
+                match(",");
+                if (isInFirstSet(Grammar.NonTerminal.ListaArgsFormales)){
+                    ListaArgsFormales();
+                }
+                else {
+                    throw new ParserException("Se esperaba argumento formal",
+                            currentToken.row, currentToken.col);
+                }
             }
         }
         else {
-            throw new ParserException("Se esperaba un Tipo",
+            throw new ParserException("Se esperaba argumento formal",
                     currentToken.row, currentToken.col);
-        }
-    }
-
-    private void ListaArgsFormales_1() throws IOException, LexerException,
-            ParserException {
-        if (grammar.getFollows(Grammar.NonTerminal.ListaArgsFormales_1).contains(
-                currentToken.getTag())){
-            ;
-        }
-        else {
-            match(",");
-            if (isInFirstSet(Grammar.NonTerminal.ListaArgsFormales)){
-                ListaArgsFormales();
-            }
-            else {
-                throw new ParserException("Se esperaba un Tipo",
-                        currentToken.row, currentToken.col);
-            }
         }
     }
 
     private void ArgFormal() throws IOException, LexerException,
-            ParserException {
+            ParserException, SemanticException {
         if (isInFirstSet(Grammar.NonTerminal.Tipo)){
-            Tipo();
+            Type argType = Tipo();
             match(":");
+            String argId = currentToken.getLexeme();
+            int row = currentToken.row;
+            int col = currentToken.col;
             match("ID");
+            ParameterEntry parameterEntry = new ParameterEntry(argId, argType);
+            if (symbolTable.getCurrentMethod().addParameter(parameterEntry)
+                !=null) {
+                throw new SemanticException("El identificador de parámetro "+
+                        argId+" ya ha sido establecido en el método " +
+                        (symbolTable.getCurrentClass()==null ? "":
+                        symbolTable.getCurrentClass().getId() + ".") +
+                        symbolTable.getCurrentMethod().getId()+". Use otro " +
+                        "identificador para el párametro.", row, col);
+            }
         }
         else {
             throw new ParserException("Se esperaba un Tipo",
                     currentToken.row, currentToken.col);
         }
     }
-
     private void FormaMetodo() throws IOException, LexerException,
             ParserException {
         match("static");
     }
-
     private void Visibilidad() throws IOException, LexerException,
             ParserException {
         match("pub");
     }
 
-    private void TipoMetodo() throws IOException, LexerException,
-            ParserException {
+    private Type TipoMetodo() throws IOException, LexerException,
+            ParserException, SemanticException {
         if (isInFirstSet(Grammar.NonTerminal.Tipo)){
-            Tipo();
+            return Tipo();
         }
         else {
-            match("void");
+            if (Objects.equals(currentToken.getTag(), "void")){
+                match("void");
+                return new Type();
+            }
+            else {
+                throw new ParserException("Se esperaba un Tipo" +
+                        " o \"void\"", currentToken.row, currentToken.col);
+            }
         }
     }
-    private void Tipo() throws IOException, LexerException, ParserException {
+    private Type Tipo() throws IOException, LexerException, ParserException,
+            SemanticException {
         if (isInFirstSet(Grammar.NonTerminal.TipoPrimitivo)){
-            TipoPrimitivo();
+            return TipoPrimitivo();
         }
         else {
             if (isInFirstSet(Grammar.NonTerminal.TipoReferencia)){
-                TipoReferencia();
+                return TipoReferencia();
             }
             else {
                 if (isInFirstSet(Grammar.NonTerminal.TipoArray)){
-                    TipoArray();
+                    return TipoArray();
                 }
                 else {
                     throw new ParserException("Se esperaba " +
@@ -430,35 +533,73 @@ public class Parser {
             }
         }
     }
-    private void TipoPrimitivo() throws IOException, LexerException,
+    private PrimitiveType TipoPrimitivo() throws IOException, LexerException,
             ParserException {
+        PrimitiveType pType = new PrimitiveType(currentToken.getLexeme());
         match(new String[]{"Bool", "I32", "Str", "Char"});
+        return pType;
     }
 
-    private void TipoReferencia() throws IOException, LexerException,
-            ParserException {
+    private ReferenceType TipoReferencia() throws IOException, LexerException,
+            ParserException, SemanticException {
+        ReferenceType rType = new ReferenceType(currentToken.getLexeme());
         match("CLASSID");
+        return rType;
     }
 
-    private void TipoArray() throws IOException, LexerException,
+    private ArrayType TipoArray() throws IOException, LexerException,
             ParserException {
         match("Array");
         if (isInFirstSet(Grammar.NonTerminal.TipoPrimitivo)){
-            TipoPrimitivo();
+            PrimitiveType pType = TipoPrimitivo();
+            return new ArrayType(pType.getType());
         }
         else {
-            throw new ParserException("Se esperaba un Tipo" +
-                    "Primitivo", currentToken.row, currentToken.col);
+            throw new ParserException("Se esperaba un Tipo Primitivo",
+                    currentToken.row, currentToken.col);
         }
     }
-
-    private void ListaDeclVar() throws IOException, LexerException,
-    ParserException {
+    private void ListaDeclVar(boolean attribute, boolean pub, Type type)
+            throws IOException, LexerException, ParserException, SemanticException {
+        String id = currentToken.getLexeme();
+        Token tokenID = currentToken;
         match("ID");
+        if (attribute) {
+            AttributeEntry attr = new AttributeEntry(id, type, pub);
+            attr.setToken(tokenID);
+            if (symbolTable.getCurrentClass().addVariable(attr, true)!=null) {
+                throw new SemanticException("El atributo "+ id +" ya ha sido" +
+                        " declarado en la clase " +
+                        symbolTable.getCurrentClass().getId()+". Use otro" +
+                        " identifador de atributo", tokenID.row,
+                        tokenID.col);
+            }
+
+        }
+        else {
+            VarEntry var = new VarEntry(id, type);
+            var.setToken(tokenID);
+            if (symbolTable.getCurrentMethod().containsParameter(var.getId())) {
+                throw new SemanticException("La variable local "+ id +" ya" +
+                        " ha sido declarada en los argumentos formales del" +
+                        " método " + (symbolTable.getCurrentClass()==null ? "":
+                                symbolTable.getCurrentClass().getId() + ".") +
+                        symbolTable.getCurrentMethod().getId()+". Use otro" +
+                        " identifador de variable", tokenID.row, tokenID.col);
+            }
+            if (symbolTable.getCurrentMethod().addVariable(var)!=null) {
+                throw new SemanticException("La variable local "+ id +" ya" +
+                        " ha sido declarada en el método "+
+                        (symbolTable.getCurrentClass()==null ? "":
+                        symbolTable.getCurrentClass().getId() + ".") +
+                        symbolTable.getCurrentMethod().getId()+". Use otro" +
+                        " identifador de variable", tokenID.row, tokenID.col);
+            }
+        }
         if (Objects.equals(currentToken.getTag(), ",")){
             match(",");
             if (isInFirstSet(Grammar.NonTerminal.ListaDeclVar)){
-                ListaDeclVar();
+                ListaDeclVar(attribute, pub, type);
             }
             else {
                 throw new ParserException("Se esperaba(n) identicador(es) de " +
@@ -466,26 +607,28 @@ public class Parser {
             }
         }
     }
-    private void BloqueMetodo() throws IOException, LexerException,
-            ParserException {
+    private BlockNode BloqueMetodo() throws IOException, LexerException,
+            ParserException, SemanticException {
         match("{");
         if (isInFirstSet(Grammar.NonTerminal.BloqueMetodo_1)){
-            BloqueMetodo_1();
+            return BloqueMetodo_1();
         }
         else {
-            throw new ParserException("Se esperaba Tipo, bucle While," +
-                    " estructura condicional, asignación, sentencia de" +
-                    " retorno, bloque, sentencia simple o \";\""
-                    , currentToken.row, currentToken.col);
+            throw new ParserException("Se esperaba declaración de tipo," +
+                    " bucle While, estructura condicional, asignación," +
+                    " sentencia de retorno, bloque, sentencia simple o \";\"",
+                    currentToken.row, currentToken.col);
         }
     }
 
-    private void BloqueMetodo_1() throws IOException, LexerException,
-            ParserException {
+    private BlockNode BloqueMetodo_1() throws IOException, LexerException,
+            ParserException, SemanticException {
+        BlockNode block = new BlockNode();
         if (isInFirstSet(Grammar.NonTerminal.DeclVarLocalesR)){
             DeclVarLocalesR();
             if (isInFirstSet(Grammar.NonTerminal.BloqueMetodo_2)){
-                BloqueMetodo_2();
+                BloqueMetodo_2(block);
+                return block;
             }
             else {
                 throw new ParserException("Se esperaba bucle While, " +
@@ -496,28 +639,32 @@ public class Parser {
         }
         else {
             if (isInFirstSet(Grammar.NonTerminal.SentenciaR)){
-                SentenciaR();
+                SentenciaR(block);
                 match("}");
+                return block;
             }
             else {
                 if (Objects.equals(currentToken.getTag(), "}")){
                     match("}");
+                    return block;
                 }
                 else {
-                    throw new ParserException("Se esperaba bucle While,"+
-                            " estructura condicional, asignación, sentencia de" +
-                            " retorno, bloque, sentencia simple, \";\" o \"}\"",
+                    throw new ParserException("Se esperaba declaración de" +
+                            " tipo, bucle While, estructura condicional," +
+                            " asignación, sentencia de retorno, bloque," +
+                            " sentencia simple, \";\" o \"}\"",
                             currentToken.row, currentToken.col);
                 }
             }
         }
     }
-    private void BloqueMetodo_2() throws IOException, LexerException,
+    private BlockNode BloqueMetodo_2(BlockNode block) throws IOException, LexerException,
             ParserException {
         if (isInFirstSet(Grammar.NonTerminal.SentenciaR)){
-            SentenciaR();
+            SentenciaR(block);
             if (Objects.equals(currentToken.getTag(), "}")){
                 match("}");
+                return block;
             }
             else {
                 throw new ParserException("Se esperaba bucle While, "+
@@ -528,10 +675,11 @@ public class Parser {
         }
         else {
             match("}");
+            return block;
         }
     }
     private void DeclVarLocalesR() throws IOException, LexerException,
-            ParserException {
+            ParserException, SemanticException {
         if (isInFirstSet(Grammar.NonTerminal.DeclVarLocales)){
             DeclVarLocales();
             if (isInFirstSet(Grammar.NonTerminal.DeclVarLocalesR)){
@@ -539,17 +687,20 @@ public class Parser {
             }
         }
         else {
-            throw new ParserException("Se esperaba un Tipo" +
-                    "Primitivo", currentToken.row, currentToken.col);
+            throw new ParserException("Se esperaba declaración de variable" +
+                    " local", currentToken.row, currentToken.col);
         }
     }
-
-    private void SentenciaR() throws IOException, LexerException,
+    private void SentenciaR(BlockNode block) throws IOException, LexerException,
             ParserException {
         if (isInFirstSet(Grammar.NonTerminal.Sentencia)){
-            Sentencia();
+            SentenceNode sentence = Sentencia();
+            if (sentence!=null) {
+                block.addSentence(sentence);
+            }
+
             if (isInFirstSet(Grammar.NonTerminal.SentenciaR)){
-                SentenciaR();
+                SentenciaR(block);
             }
         }
         else {
@@ -559,14 +710,13 @@ public class Parser {
                     currentToken.row, currentToken.col);
         }
     }
-
     private void DeclVarLocales() throws IOException, LexerException,
-            ParserException {
+            ParserException, SemanticException {
         if (isInFirstSet(Grammar.NonTerminal.Tipo)){
-            Tipo();
+            Type type = Tipo();
             match(":");
             if (isInFirstSet(Grammar.NonTerminal.ListaDeclVar)){
-                ListaDeclVar();
+                ListaDeclVar(false, false, type);
                 match(";");
             }
             else {
@@ -575,35 +725,41 @@ public class Parser {
             }
         }
         else {
-            throw new ParserException("Se esperaba un Tipo",
+            throw new ParserException("Se esperaba declaración de Tipo",
                     currentToken.row, currentToken.col);
         }
     }
 
-    private void Sentencia() throws IOException, LexerException,
+    private SentenceNode Sentencia() throws IOException, LexerException,
             ParserException {
         if (Objects.equals(currentToken.getTag(), ";")){
             match(";");
+            return null;
         }
         else {
             if (isInFirstSet(Grammar.NonTerminal.Asignacion)) {
-                Asignacion();
+                AssignNode assigment = Asignacion();
                 match(";");
+                return assigment;
             }
             else {
                 if (isInFirstSet(Grammar.NonTerminal.SentSimple)) {
-                    SentSimple();
+                    ExpNode simpleSent = SentSimple();
                     match(";");
+                    return simpleSent;
                 }
                 else {
                     if (Objects.equals(currentToken.getTag(), "while")){
                         match("while");
                         match("(");
                         if (isInFirstSet(Grammar.NonTerminal.Expresion)) {
-                            Expresion();
+                            ExpNode condition = Expresion();
                             match(")");
                             if (isInFirstSet(Grammar.NonTerminal.Sentencia)) {
-                                Sentencia();
+                                SentenceNode body = Sentencia();
+                                WhileNode whileN = new WhileNode();
+                                whileN.makeFamily(condition, body);
+                                return whileN;
                             }
                             else {
                                 throw new ParserException("Se esperaba bucle" +
@@ -620,11 +776,11 @@ public class Parser {
                     }
                     else {
                         if (isInFirstSet(Grammar.NonTerminal.Bloque)) {
-                            Bloque();
+                            return Bloque();
                         }
                         else {
                             if (isInFirstSet(Grammar.NonTerminal.If)) {
-                                If();
+                                return If();
                             }
                             else {
                                 if (Objects.equals(currentToken.getTag(),
@@ -632,7 +788,9 @@ public class Parser {
                                     match("return");
                                     if (isInFirstSet(Grammar.NonTerminal.
                                             Return)) {
-                                        Return();
+                                        ReturnNode returnNode = Return();
+                                        returnNode.setHasReturnStmt(true);
+                                        return returnNode;
                                     }
                                     else {
                                         throw new ParserException(
@@ -660,17 +818,24 @@ public class Parser {
         }
     }
 
-    public void If() throws IOException, LexerException, ParserException {
+    public IfElseNode If() throws IOException, LexerException, ParserException {
         match("if");
         match("(");
         if (isInFirstSet(Grammar.NonTerminal.Expresion)) {
-            Expresion();
+            ExpNode condition = Expresion();
             match(")");
             if (isInFirstSet(Grammar.NonTerminal.Sentencia)) {
-                Sentencia();
+                SentenceNode thenPart = Sentencia();
+                IfElseNode ifElse = new IfElseNode();
+                ifElse.makeFamily(condition, thenPart);
                 if (isInFirstSet(Grammar.NonTerminal.Else)) {
-                    Else();
+                    SentenceNode elsePart = Else();
+                    ifElse.setElsePart(elsePart);
+                    if (thenPart.hasReturnStmt() && elsePart.hasReturnStmt()) {
+                        ifElse.setHasReturnStmt(true);
+                    }
                 }
+                return ifElse;
             }
             else {
                 throw new ParserException("Se esperaba bucle While" +
@@ -684,10 +849,10 @@ public class Parser {
                     currentToken.col);
         }
     }
-    private void Else() throws IOException, LexerException, ParserException {
+    private SentenceNode Else() throws IOException, LexerException, ParserException {
         match("else");
         if (isInFirstSet(Grammar.NonTerminal.Sentencia)) {
-            Sentencia();
+            return Sentencia();
         }
         else {
             throw new ParserException("Se esperaba bucle While" +
@@ -697,21 +862,27 @@ public class Parser {
         }
     }
 
-    private void Return() throws IOException, LexerException, ParserException {
+    private ReturnNode Return() throws IOException, LexerException, ParserException {
         if (isInFirstSet(Grammar.NonTerminal.Expresion)) {
-            Expresion();
+            ExpNode exp = Expresion();
             match(";");
+            return new ReturnNode(exp);
         }
         else {
-            match(";");
+            if (Objects.equals(currentToken.getTag(), ";")){
+                match(";");
+                return new ReturnNode();
+            }
+            else {
+                throw new ParserException("Se esperaba Expresión o \";\"",
+                        currentToken.row, currentToken.col);
+            }
         }
-
     }
-
-    private void Bloque() throws IOException, LexerException, ParserException {
+    private BlockNode Bloque() throws IOException, LexerException, ParserException {
         match("{");
         if (isInFirstSet(Grammar.NonTerminal.Bloque_1)) {
-            Bloque_1();
+            return Bloque_1();
         }
         else {
             throw new ParserException("Se esperaba bucle While, estructura" +
@@ -721,25 +892,38 @@ public class Parser {
         }
     }
 
-    private void Bloque_1() throws IOException, LexerException,
+    private BlockNode Bloque_1() throws IOException, LexerException,
             ParserException {
+        BlockNode block = new BlockNode();
         if (isInFirstSet(Grammar.NonTerminal.SentenciaR)) {
-            SentenciaR();
+            SentenciaR(block);
             match("}");
+            return block;
         }
         else {
-            match("}");
+            if (Objects.equals(currentToken.getTag(), "}")){
+                match("}");
+                return  block;
+            }
+            else {
+                throw new ParserException("Se esperaba bucle While, estructura" +
+                        " condicional, asignación, sentencia de retorno, bloque," +
+                        " sentencia simple, \";\" o \"}\""
+                        , currentToken.row, currentToken.col);
+            }
         }
 
     }
-
-    private void Asignacion() throws IOException, LexerException,
+    private AssignNode Asignacion() throws IOException, LexerException,
             ParserException {
+        AssignNode assignment = new AssignNode();
         if (isInFirstSet(Grammar.NonTerminal.AsignVarSimple)) {
-            AsignVarSimple();
+            VarNode leftSide = AsignVarSimple();
             match("=");
             if (isInFirstSet(Grammar.NonTerminal.Expresion)) {
-                Expresion();
+                ExpNode rightSide = Expresion();
+                assignment.makeFamily(leftSide, rightSide);
+                return assignment;
             }
             else {
                 throw new ParserException("Se esperaba Expresión",
@@ -748,182 +932,233 @@ public class Parser {
         }
         else {
             if (isInFirstSet(Grammar.NonTerminal.AsignSelfSimple)) {
-                AsignSelfSimple();
-            }
-            match("=");
-            if (isInFirstSet(Grammar.NonTerminal.Expresion)) {
-                Expresion();
-            }
-            else {
-                throw new ParserException("Se esperaba Expresión",
-                        currentToken.row, currentToken.col);
-            }
-        }
-    }
-
-    private void AsignVarSimple() throws IOException, LexerException,
-            ParserException {
-        match("ID");
-        if (isInFirstSet(Grammar.NonTerminal.AsignVarSimple_1)) {
-            AsignVarSimple_1();
-        }
-        else {
-            throw new ParserException("Se esperaba \".\", \"[\" o \"=\"",
-                    currentToken.row, currentToken.col);
-        }
-    }
-    private void AsignVarSimple_1() throws IOException, LexerException,
-            ParserException {
-        if (isInFirstSet(Grammar.NonTerminal.EncadenadoSimpleR)) {
-            EncadenadoSimpleR();
-        }
-        else {
-            if (grammar.getFollows(Grammar.NonTerminal.AsignVarSimple_1)
-                    .contains(currentToken.getTag())) {
-                ;
-            }
-            else {
-                match("[");
+                VarNode leftSide = AsignSelfSimple();
+                match("=");
                 if (isInFirstSet(Grammar.NonTerminal.Expresion)) {
-                    Expresion();
-                    match("[");
+                    ExpNode rightSide = Expresion();
+                    assignment.makeFamily(leftSide, rightSide);
+                    return assignment;
                 }
                 else {
                     throw new ParserException("Se esperaba Expresión",
                             currentToken.row, currentToken.col);
                 }
             }
-        }
-    }
-
-    private void AsignSelfSimple() throws IOException, LexerException,
-            ParserException {
-        match("self");
-        if (isInFirstSet(Grammar.NonTerminal.EncadenadoSimpleR)) {
-            EncadenadoSimpleR();
-        }
-        else {
-            throw new ParserException("Se esperaba \".\"",
-                    currentToken.row, currentToken.col);
-        }
-    }
-
-    private void EncadenadoSimpleR() throws IOException, LexerException,
-            ParserException {
-        if (isInFirstSet(Grammar.NonTerminal.EncadenadoSimple)) {
-            EncadenadoSimple();
-            if (isInFirstSet(Grammar.NonTerminal.EncadenadoSimpleR)) {
-                EncadenadoSimpleR();
+            else {
+                throw new ParserException("Se esperaba identificador de" +
+                        " variable o referencia self ",
+                        currentToken.row, currentToken.col);
             }
         }
+    }
+
+    private VarNode AsignVarSimple() throws IOException, LexerException,
+            ParserException {
+        Token token = currentToken;
+        match("ID");
+        VarNode var;
+        if (isInFirstSet(Grammar.NonTerminal.AsignVarSimple_1)) {
+            if (currentToken.getTag() == ".") {
+                var = new VarNode(token);
+            }
+            else {
+                var = new ArrayNode(token);
+                ((ArrayNode) var).setAccess(true);
+            }
+            return AsignVarSimple_1(var);
+        }
+        return new VarNode(token);
+    }
+    private VarNode AsignVarSimple_1(VarNode var) throws IOException, LexerException,
+            ParserException {
+        if (isInFirstSet(Grammar.NonTerminal.EncadenadoSimpleR)) {
+            AccessNode chainedVar = EncadenadoSimpleR();
+            var.setChain(chainedVar);
+            return var;
+        }
+        else {
+            if (Objects.equals(currentToken.getTag(), "[")){
+                match("[");
+                if (isInFirstSet(Grammar.NonTerminal.Expresion)) {
+                    ExpNode indexExp = Expresion();
+                    ((ArrayNode)var).setIndexExp(indexExp);
+                    match("]");
+                    return var;
+                }
+                else {
+                    throw new ParserException("Se esperaba Expresión",
+                            currentToken.row, currentToken.col);
+                }
+            }
+            else {
+                throw new ParserException("Se esperaba \".\"",
+                        currentToken.row, currentToken.col);
+
+            }
+
+        }
+    }
+    private VarNode AsignSelfSimple() throws IOException, LexerException,
+            ParserException {
+        Token token = currentToken;
+        match("self");
+        VarNode self;
+        if (isInFirstSet(Grammar.NonTerminal.EncadenadoSimpleR)) {
+            self = new VarNode(token);
+            AccessNode chainedVar = EncadenadoSimpleR();
+            self.setChain(chainedVar);
+            return self;
+        }
         else {
             throw new ParserException("Se esperaba \".\"",
                     currentToken.row, currentToken.col);
         }
     }
+    private AccessNode EncadenadoSimpleR() throws IOException, LexerException,
+            ParserException {
+        if (isInFirstSet(Grammar.NonTerminal.EncadenadoSimple)) {
+            AccessNode chainedVar = EncadenadoSimple();
+            if (isInFirstSet(Grammar.NonTerminal.EncadenadoSimpleR)) {
 
-    private void EncadenadoSimple() throws IOException, LexerException,
+                AccessNode chainedVar2 = EncadenadoSimpleR();
+                chainedVar.setChain(chainedVar2);
+            }
+            return chainedVar;
+        }
+        else {
+            throw new ParserException("Se esperaba \".\"",
+                    currentToken.row, currentToken.col);
+        }
+    }
+    private AccessNode EncadenadoSimple() throws IOException, LexerException,
             ParserException {
         match(".");
+        Token token = currentToken;
         match("ID");
+        return new VarNode(token);
     }
-
-    private void SentSimple() throws IOException, LexerException,
+    private ExpNode SentSimple() throws IOException, LexerException,
             ParserException {
         match("(");
         if (isInFirstSet(Grammar.NonTerminal.Expresion)) {
-            Expresion();
+            ExpNode exp = Expresion();
             match(")");
+            return exp;
         }
         else {
             throw new ParserException("Se esperaba Expresión",
                     currentToken.row, currentToken.col);
         }
     }
-
-    private void Expresion() throws IOException, LexerException,
+    private ExpNode Expresion() throws IOException, LexerException,
             ParserException {
         if (isInFirstSet(Grammar.NonTerminal.ExpAnd)) {
-            ExpAnd();
+            ExpNode leftSide = ExpAnd();
             if (isInFirstSet(Grammar.NonTerminal.ExpresionRD)) {
-                ExpresionRD();
+                BinExpNode orExp = ExpresionRD();
+                orExp.setLeftSide(leftSide);
+                return orExp;
             }
+            return leftSide;
         }
         else {
-            throw new ParserException("Se esperaba Operando o Operador Unario",
+            throw new ParserException("Se esperaba Operando u Operador Unario",
                     currentToken.row, currentToken.col);
         }
     }
-
-    private void ExpresionRD() throws IOException, LexerException,
+    private BinExpNode ExpresionRD() throws IOException, LexerException,
             ParserException {
-        match("||");
+        Token operator = match("||");
         if (isInFirstSet(Grammar.NonTerminal.ExpAnd)) {
-            ExpAnd();
+            BinExpNode orExp = new BinExpNode();
+            orExp.setOperator(operator);
+            ExpNode leftSide = ExpAnd();
             if (isInFirstSet(Grammar.NonTerminal.ExpresionRD)) {
-                ExpresionRD();
+                BinExpNode rightSide = ExpresionRD();
+                rightSide.setLeftSide(leftSide);
+                orExp.setRightSide(rightSide);
+                return orExp;
             }
+            orExp.setRightSide(leftSide);
+            return orExp;
         }
         else {
-            throw new ParserException("Se esperaba Operando o Operador Unario",
+            throw new ParserException("Se esperaba Operando u Operador Unario",
                     currentToken.row, currentToken.col);
         }
     }
-
-    private void ExpAnd() throws IOException, LexerException, ParserException {
+    private ExpNode ExpAnd() throws IOException, LexerException, ParserException {
         if (isInFirstSet(Grammar.NonTerminal.ExpIgual)) {
-            ExpIgual();
+            ExpNode leftSide = ExpIgual();
             if (isInFirstSet(Grammar.NonTerminal.ExpAndRD)) {
-                ExpAndRD();
+                BinExpNode andExp = ExpAndRD();
+                andExp.setLeftSide(leftSide);
+                return andExp;
             }
+            return leftSide;
         }
         else {
             throw new ParserException("Se esperaba Operador de igualdad" +
                     " \"==\" o \"!=\"", currentToken.row, currentToken.col);
         }
     }
-
-    private void ExpAndRD() throws IOException, LexerException,
+    private BinExpNode ExpAndRD() throws IOException, LexerException,
             ParserException {
-        match("&&");
+        Token operator = match("&&");
         if (isInFirstSet(Grammar.NonTerminal.ExpIgual)) {
-            ExpIgual();
+            BinExpNode andExp = new BinExpNode();
+            andExp.setOperator(operator);
+            ExpNode leftSide = ExpIgual();
             if (isInFirstSet(Grammar.NonTerminal.ExpAndRD)) {
-                ExpAndRD();
+                BinExpNode rightSide = ExpAndRD();
+                rightSide.setLeftSide(leftSide);
+                andExp.setRightSide(rightSide);
+                return andExp;
             }
+            andExp.setRightSide(leftSide);
+            return andExp;
         }
         else {
-            throw new ParserException("Se esperaba Operando o Operador Unario",
+            throw new ParserException("Se esperaba Operando u Operador Unario",
                     currentToken.row, currentToken.col);
         }
-    }
 
-    private void ExpIgual() throws IOException, LexerException,
+    }
+    private ExpNode ExpIgual() throws IOException, LexerException,
             ParserException {
         if (isInFirstSet(Grammar.NonTerminal.ExpCompuesta)) {
-            ExpCompuesta();
+            ExpNode leftSide = ExpCompuesta();
             if (isInFirstSet(Grammar.NonTerminal.ExpIgualRD)) {
-                ExpIgualRD();
+                BinExpNode eqExp = ExpIgualRD();
+                eqExp.setLeftSide(leftSide);
+                return eqExp;
             }
+            return leftSide;
         }
         else {
-            throw new ParserException("Se esperaba Operando o Operador Unario",
+            throw new ParserException("Se esperaba Operando u Operador Unario",
                     currentToken.row, currentToken.col);
         }
     }
-
-    private void ExpIgualRD() throws IOException, LexerException,
+    private BinExpNode ExpIgualRD() throws IOException, LexerException,
             ParserException {
         if (isInFirstSet(Grammar.NonTerminal.OpIgual)) {
-            OpIgual();
+            Token operator = OpIgual();
             if (isInFirstSet(Grammar.NonTerminal.ExpCompuesta)) {
-                ExpCompuesta();
+                BinExpNode eqExp = new BinExpNode();
+                eqExp.setOperator(operator);
+                ExpNode leftSide = ExpCompuesta();
                 if (isInFirstSet(Grammar.NonTerminal.ExpIgualRD)) {
-                    ExpIgualRD();
+                    BinExpNode rightSide = ExpIgualRD();
+                    rightSide.setLeftSide(leftSide);
+                    eqExp.setRightSide(rightSide);
+                    return eqExp;
                 }
+                eqExp.setRightSide(leftSide);
+                return eqExp;
             }
             else {
-                throw new ParserException("Se esperaba Operando o Operador" +
+                throw new ParserException("Se esperaba Operando u Operador" +
                         " Unario", currentToken.row, currentToken.col);
             }
         }
@@ -932,15 +1167,18 @@ public class Parser {
                     " \"==\" o \"!=\"", currentToken.row, currentToken.col);
         }
     }
-
-    private void ExpCompuesta() throws IOException, LexerException,
+    private ExpNode ExpCompuesta() throws IOException, LexerException,
             ParserException {
         if (isInFirstSet(Grammar.NonTerminal.ExpAdd)) {
-            ExpAdd();
+            ExpNode leftSide = ExpAdd();
             if (isInFirstSet(Grammar.NonTerminal.OpCompuesto)) {
-                OpCompuesto();
+                Token operator = OpCompuesto();
                 if (isInFirstSet(Grammar.NonTerminal.ExpAdd)) {
-                    ExpAdd();
+                    BinExpNode compExp = new BinExpNode();
+                    compExp.setOperator(operator);
+                    ExpNode rightSide = ExpAdd();
+                    compExp.makeFamily(leftSide, rightSide);
+                    return compExp;
                 }
                 else {
                     throw new ParserException("Se esperaba Operando o" +
@@ -948,38 +1186,49 @@ public class Parser {
                             currentToken.col);
                 }
             }
+            return leftSide;
         }
         else {
-            throw new ParserException("Se esperaba Operando o Operador Unario",
+            throw new ParserException("Se esperaba Operando u Operador Unario",
                     currentToken.row, currentToken.col);
         }
     }
-
-    private void ExpAdd() throws IOException, LexerException, ParserException {
+    private ExpNode ExpAdd() throws IOException, LexerException, ParserException {
         if (isInFirstSet(Grammar.NonTerminal.ExpMul)) {
-            ExpMul();
+            ExpNode leftSide = ExpMul();
             if (isInFirstSet(Grammar.NonTerminal.ExpAddRD)) {
-                ExpAddRD();
+                //ExpNode addExp = new ExpNode();
+                BinExpNode addExp = ExpAddRD();
+                addExp.setLeftSide(leftSide);
+                return addExp;
             }
+            return leftSide;
         }
         else {
-            throw new ParserException("Se esperaba Operando o Operador Unario",
+            throw new ParserException("Se esperaba Operando u Operador Unario",
                     currentToken.row, currentToken.col);
         }
     }
 
-    private void ExpAddRD() throws IOException, LexerException,
+    private BinExpNode ExpAddRD() throws IOException, LexerException,
             ParserException {
         if (isInFirstSet(Grammar.NonTerminal.OpAdd)) {
-            OpAdd();
+            Token operator = OpAdd();
             if (isInFirstSet(Grammar.NonTerminal.ExpMul)) {
-                ExpMul();
+                BinExpNode addExp = new BinExpNode();
+                addExp.setOperator(operator);
+                ExpNode leftSide = ExpMul();
                 if (isInFirstSet(Grammar.NonTerminal.ExpAddRD)) {
-                    ExpAddRD();
+                    BinExpNode rightSide = ExpAddRD();
+                    rightSide.setLeftSide(leftSide);
+                    addExp.setRightSide(rightSide);
+                    return addExp;
                 }
+                addExp.setRightSide(leftSide);
+                return addExp;
             }
             else {
-                throw new ParserException("Se esperaba Operando o Operador " +
+                throw new ParserException("Se esperaba Operando u Operador " +
                         "Unario", currentToken.row, currentToken.col);
             }
         }
@@ -988,29 +1237,40 @@ public class Parser {
                     currentToken.row, currentToken.col);
         }
     }
-
-    private void ExpMul() throws IOException, LexerException, ParserException {
+    private ExpNode ExpMul() throws IOException, LexerException, ParserException {
         if (isInFirstSet(Grammar.NonTerminal.ExpUn)) {
-            ExpUn();
+            ExpNode leftSide = ExpUn();
             if (isInFirstSet(Grammar.NonTerminal.ExpMulRD)) {
-                ExpMulRD();
+                //ExpNode multExp = new BinExpNode();
+                BinExpNode multExp = ExpMulRD();
+                multExp.setLeftSide(leftSide);
+                return multExp;
             }
+            return leftSide;
         }
         else {
-            throw new ParserException("Se esperaba Operando o Operador Unario",
+            throw new ParserException("Se esperaba Operando u Operador Unario",
                     currentToken.row, currentToken.col);
         }
     }
 
-    private void ExpMulRD() throws IOException, LexerException,
+    private BinExpNode ExpMulRD() throws IOException, LexerException,
             ParserException {
         if (isInFirstSet(Grammar.NonTerminal.OpMul)) {
-            OpMul();
+            Token operator = OpMul();
             if (isInFirstSet(Grammar.NonTerminal.ExpUn)) {
-                ExpUn();
+                BinExpNode multExp = new BinExpNode();
+                multExp.setOperator(operator);
+                ExpNode leftSide = ExpUn();
                 if (isInFirstSet(Grammar.NonTerminal.ExpMulRD)) {
-                    ExpMulRD();
+                    BinExpNode rightSide = ExpMulRD();
+                    rightSide.setLeftSide(leftSide);
+                    multExp.setRightSide(rightSide);
+                    return multExp;
                 }
+                multExp.setRightSide(leftSide);
+                return multExp;
+
             }
             else {
                 throw new ParserException("Se esperaba Operando o" +
@@ -1024,11 +1284,15 @@ public class Parser {
         }
     }
 
-    private void ExpUn() throws IOException, LexerException, ParserException {
+    private ExpNode ExpUn() throws IOException, LexerException, ParserException {
         if (isInFirstSet(Grammar.NonTerminal.OpUnario)) {
-            OpUnario();
+            UnExpNode unExp = new UnExpNode();
+            Token operator = OpUnario();
+            unExp.setOperator(operator);
             if (isInFirstSet(Grammar.NonTerminal.ExpUn)) {
-                ExpUn();
+                ExpNode exp = ExpUn();
+                unExp.setRightSide(exp);
+                return unExp;
             }
             else {
                 throw new ParserException("Se esperaba Operando o" +
@@ -1037,46 +1301,58 @@ public class Parser {
         }
         else {
             if (isInFirstSet(Grammar.NonTerminal.Operando)) {
-                Operando();
+                return Operando();
             }
             else {
-                throw new ParserException("Se esperaba Operando o Operador " +
+                throw new ParserException("Se esperaba Operando u Operador " +
                         "Unario", currentToken.row, currentToken.col);
             }
         }
+
     }
 
-    private void OpIgual() throws IOException, LexerException, ParserException {
-        match(new String[]{"==","!="});
+    private Token OpIgual() throws IOException, LexerException, ParserException {
+        return match(new String[]{"==","!="});
     }
 
-    private void OpCompuesto() throws IOException, LexerException,
+    private Token OpCompuesto() throws IOException, LexerException,
             ParserException {
-        match(new String[]{"<",">","<=",">="});
+        return match(new String[]{"<",">","<=",">="});
     }
 
-    private void OpAdd() throws IOException, LexerException, ParserException {
-        match(new String[]{"+","-"});
+    private Token OpAdd() throws IOException, LexerException, ParserException {
+        return match(new String[]{"+","-"});
+
     }
-    private void OpUnario() throws IOException, LexerException,
+
+    private Token OpUnario() throws IOException, LexerException,
             ParserException {
-        match(new String[]{"+","-","!"});
+        return match(new String[]{"+","-","!"});
     }
 
-    private void OpMul() throws IOException, LexerException, ParserException {
-        match(new String[]{"*","/","%"});
+    private Token OpMul() throws IOException, LexerException, ParserException {
+        return match(new String[]{"*","/","%"});
     }
-    private void Operando() throws IOException, LexerException,
+
+    private ExpNode Operando() throws IOException, LexerException,
             ParserException {
         if (isInFirstSet(Grammar.NonTerminal.Literal)) {
-            Literal();
+            return Literal();
         }
         else {
             if (isInFirstSet(Grammar.NonTerminal.Primario)) {
-                Primario();
+                ExpNode exp = Primario();
                 if (isInFirstSet(Grammar.NonTerminal.Encadenado)) {
-                    Encadenado();
+                    AccessNode chain = Encadenado();
+                    try {
+                        ((AccessNode) exp).setChain(chain);
+                    }
+                    catch (ClassCastException e) {
+                        System.err.println(e.getMessage());
+                        return null;
+                    }
                 }
+                return exp;
             }
             else {
                 throw new ParserException("Se esperaba Literal o alguno de" +
@@ -1086,27 +1362,28 @@ public class Parser {
             }
         }
     }
-    private void Literal() throws IOException, LexerException, ParserException {
-        match(new String[]{"nil","true","false","NUM","STRING",
+    private LiteralNode Literal() throws IOException, LexerException, ParserException {
+        Token token = match(new String[]{"nil","true","false","NUM","STRING",
                 "CHAR"});
+        return new LiteralNode(token, Type.createType(token.getTag()));
     }
-    private void Primario() throws IOException, LexerException,
+    private ExpNode Primario() throws IOException, LexerException,
             ParserException {
         if (isInFirstSet(Grammar.NonTerminal.ExprPar)) {
-            ExprPar();
+            return ExprPar();
         }
         else {
             if (isInFirstSet(Grammar.NonTerminal.AccesoSelf)) {
-                AccesoSelf();
+                return AccesoSelf();
             } else {
                 if (isInFirstSet(Grammar.NonTerminal.VarOMet)) {
-                    VarOMet();
+                    return VarOMet();
                 } else {
                     if (isInFirstSet(Grammar.NonTerminal.LlamadaMetEst)) {
-                        LlamadaMetEst();
+                        return LlamadaMetEst();
                     } else {
                         if (isInFirstSet(Grammar.NonTerminal.LlamadaConst)) {
-                            LlamadaConst();
+                            return LlamadaConst();
                         } else {
                             throw new ParserException("Se esperaba alguno de" +
                                     " los siguientes tokens: \"(\", \"self\"," +
@@ -1118,149 +1395,187 @@ public class Parser {
             }
         }
     }
-
-    private void ExprPar() throws IOException, LexerException, ParserException {
+    private ExpNode ExprPar() throws IOException, LexerException, ParserException {
         match("(");
         if (isInFirstSet(Grammar.NonTerminal.Expresion)) {
-            Expresion();
+            ExpNode exp = Expresion();
             match(")");
             if (isInFirstSet(Grammar.NonTerminal.Encadenado)) {
-                Encadenado();
+                try {
+                    AccessNode chained = Encadenado();
+                    ((AccessNode) exp).setChain(chained);
+                    return exp;
+                } catch (ClassCastException e) {
+                    System.err.println("Parser.ExprPar(). "+e.getMessage());
+                    return null;
+                }
             }
+            return exp;
         }
         else {
             throw new ParserException("Se esperaba Expresión",
                     currentToken.row, currentToken.col);
         }
     }
-
-    private void AccesoSelf() throws IOException, LexerException,
+    private VarNode AccesoSelf() throws IOException, LexerException,
             ParserException {
+        Token token = currentToken;
         match("self");
+        VarNode self = new VarNode(token);
         if (isInFirstSet(Grammar.NonTerminal.Encadenado)) {
-            Encadenado();
+            AccessNode chain = Encadenado();
+            self.setChain(chain);
         }
+        return self;
     }
-
-    private void VarOMet() throws IOException, LexerException, ParserException {
+    private AccessNode VarOMet() throws IOException, LexerException, ParserException {
+        Token token = currentToken;
         match("ID");
         if (isInFirstSet(Grammar.NonTerminal.VarOMet_1)) {
-            VarOMet_1();
+            return VarOMet_1(token);
         }
-        else {
-            throw new ParserException("Se esperaba \".\", \"(\" o \"[\"",
-                    currentToken.row, currentToken.col);
+        return new VarNode(token);
 
-        }
     }
 
-    private void VarOMet_1() throws IOException, LexerException,
+    private AccessNode VarOMet_1(Token token) throws IOException, LexerException,
             ParserException {
-        if (grammar.getFollows(Grammar.NonTerminal.VarOMet_1)
-                .contains(currentToken.getTag())) {
-            ;
+        if (isInFirstSet(Grammar.NonTerminal.Encadenado)) {
+            // AccesoVariableEncadenado
+            AccessNode chain = Encadenado();
+            VarNode var = new VarNode(token);
+            var.setChain(chain);
+            return var;
         }
         else {
-            if (isInFirstSet(Grammar.NonTerminal.Encadenado)) {
-                Encadenado();
+            if (isInFirstSet(Grammar.NonTerminal.ArgsActuales)) {
+                // LlamadaMetodo
+                CallNode call = new CallNode();
+                call.setToken(token);
+                ArgsActuales(call);
+                if (isInFirstSet(Grammar.NonTerminal.Encadenado)) {
+                    // LlamadaMetodoEncadenado
+                    AccessNode chain = Encadenado();
+                    call.setChain(chain);
+                }
+                return call;
             }
             else {
-                if (isInFirstSet(Grammar.NonTerminal.ArgsActuales)) {
-                    ArgsActuales();
-                    if (isInFirstSet(Grammar.NonTerminal.Encadenado)) {
-                        Encadenado();
-                    }
-                }
-                else {
-                    if (Objects.equals(currentToken.getTag(), "[")){
-                        match("[");
-                        if (isInFirstSet(Grammar.NonTerminal.Expresion)) {
-                            Expresion();
-                        }
+                if (Objects.equals(currentToken.getTag(), "[")){
+                    match("[");
+                    if (isInFirstSet(Grammar.NonTerminal.Expresion)) {
+                        ExpNode indexExp = Expresion();
                         match("]");
+                        ArrayNode arrayVar = new ArrayNode(token, indexExp);
+                        arrayVar.setAccess(true);
+                        return  arrayVar;
                     }
                     else {
-                        throw new ParserException("Se esperaba \".\", \"(\"" +
-                                "o \"[\"", currentToken.row, currentToken.col);
+                        throw new ParserException("Se esperaba Expresión",
+                                currentToken.row, currentToken.col);
                     }
+
+                }
+                else {
+                    throw new ParserException("Se esperaba \".\", \"(\"" +
+                            "o \"[\"", currentToken.row, currentToken.col);
                 }
             }
         }
-    }
 
-    /* Sin usar. Reemplazado por método VarOMet
-    private void AccesoVar() throws IOException, LexerException {
-        match("ID");
-        if (isInFirstSet(Grammar.NonTerminal.Encadenado)) {
-            Encadenado();
-        }
     }
-    */
-    private void LlamadaMet() throws IOException, LexerException,
+    private CallNode LlamadaMet(CallNode method) throws IOException, LexerException,
             ParserException {
+        Token token = currentToken;
         match("ID");
         if (isInFirstSet(Grammar.NonTerminal.ArgsActuales)) {
-            ArgsActuales();
-            if (isInFirstSet(Grammar.NonTerminal.Encadenado)) {
-                Encadenado();
+            if (method == null) {
+                method = new CallNode();
             }
+            method.setToken(token);
+            ArgsActuales(method);
+            if (isInFirstSet(Grammar.NonTerminal.Encadenado)) {
+                AccessNode chain = Encadenado();
+                method.setChain(chain);
+            }
+            return method;
+
         }
         else{
             throw new ParserException("Se esperaba \"(\"",
                     currentToken.row, currentToken.col);
         }
     }
-
-    private void LlamadaMetEst() throws IOException, LexerException,
+    private CallNode LlamadaMetEst() throws IOException, LexerException,
             ParserException {
+        Token token = currentToken;
         match("CLASSID");
         match(".");
         if (isInFirstSet(Grammar.NonTerminal.LlamadaMet)) {
-            LlamadaMet();
+            CallNode staticCall = new CallNode();
+            staticCall.setStaticClassT(token);
+            LlamadaMet(staticCall);
             if (isInFirstSet(Grammar.NonTerminal.Encadenado)) {
-                Encadenado();
+                AccessNode chain = Encadenado();
+                staticCall.setChain(chain);
             }
+            return staticCall;
         }
         else{
             throw new ParserException("Se esperaba Identificador de Método" +
                     " Estático", currentToken.row, currentToken.col);
         }
     }
-
-    private void LlamadaConst() throws IOException, LexerException,
+    private AccessNode LlamadaConst() throws IOException, LexerException,
             ParserException {
         match("new");
         if (isInFirstSet(Grammar.NonTerminal.LlamadaConst_1)) {
-            LlamadaConst_1();
+            return LlamadaConst_1();
         }
         else {
             throw new ParserException("Se esperaba Identificador de Clase o" +
                     " Tipo Primitivo", currentToken.row, currentToken.col);
         }
     }
-
-    private void LlamadaConst_1() throws IOException, LexerException,
+    private AccessNode LlamadaConst_1() throws IOException, LexerException,
             ParserException {
         if (isInFirstSet(Grammar.NonTerminal.TipoPrimitivo)) {
-            TipoPrimitivo();
+            // Constructor de Array
+            PrimitiveType type = TipoPrimitivo(); // Se termina de declarar al inicializar
             match("[");
             if (isInFirstSet(Grammar.NonTerminal.Expresion)) {
-                Expresion();
+                ExpNode exp = Expresion(); // Debe ser I32
                 match("]");
+                ArrayNode arrayConst = new ArrayNode(null);
+                arrayConst.setType(type.getType());
+                arrayConst.setIndexExp(exp);
+                return arrayConst;
             }
             else {
                 throw new ParserException("Se esperaba Expresión",
                         currentToken.row, currentToken.col);
             }
+
         }
         else {
             if (Objects.equals(currentToken.getTag(), "CLASSID")) {
+                // Constructor de Objeto CLASSID
+                Token token = currentToken;
                 match("CLASSID");
                 if (isInFirstSet(Grammar.NonTerminal.ArgsActuales)) {
-                    ArgsActuales();
+                    CallNode constructor = new CallNode(true);
+                    constructor.setToken(token);
+                    ArgsActuales(constructor);
                     if (isInFirstSet(Grammar.NonTerminal.Encadenado)) {
-                        Encadenado();
+                        // Constructor encadenado
+                        AccessNode chain = Encadenado();
+                        constructor.setChain(chain);
                     }
+                    return constructor;
+                }
+                else {
+                    throw new ParserException("Se esperaba \"(\"",
+                            currentToken.row, currentToken.col);
                 }
             }
             else {
@@ -1270,42 +1585,48 @@ public class Parser {
             }
         }
     }
-
-    private void ArgsActuales() throws IOException, LexerException,
-            ParserException {
+    private void ArgsActuales(CallNode methodCall) throws IOException,
+            LexerException, ParserException {
         match("(");
         if (isInFirstSet(Grammar.NonTerminal.ArgsActuales_1)) {
-            ArgsActuales_1();
+            ArgsActuales_1(methodCall);
         }
         else {
             throw new ParserException("Se esperaba Lista de Expresiones o" +
-                    " \"(\"", currentToken.row, currentToken.col);
+                    " \")\"", currentToken.row, currentToken.col);
         }
     }
 
-    private void ArgsActuales_1() throws IOException, LexerException,
-            ParserException {
+    private void ArgsActuales_1(CallNode methodCall) throws IOException,
+            LexerException, ParserException {
         if (isInFirstSet(Grammar.NonTerminal.ListaExpresiones)) {
-            ListaExpresiones();
+            ListaExpresiones(methodCall);
             match(")");
         }
         else {
-            match(")");
+            if (Objects.equals(currentToken.getTag(), ")")){
+                match(")");
+            }
+            else {
+                throw new ParserException("Se esperaba Lista de Expresiones o" +
+                        " \")\"", currentToken.row, currentToken.col);
+            }
         }
-
     }
-    private void ListaExpresiones() throws IOException, LexerException,
-            ParserException {
+    private void ListaExpresiones(CallNode methodCall) throws IOException,
+            LexerException, ParserException {
         if (isInFirstSet(Grammar.NonTerminal.Expresion)) {
-            Expresion();
+            ExpNode exp = Expresion();
+            methodCall.addParamExp(exp);
             if (Objects.equals(currentToken.getTag(), ",")) {
                 match(",");
                 if (isInFirstSet(Grammar.NonTerminal.ListaExpresiones)) {
-                    ListaExpresiones();
+                    ListaExpresiones(methodCall);
                 }
                 else {
-                    throw new ParserException("Se esperaba Expresión",
-                            currentToken.row, currentToken.col);
+                    throw new ParserException("Se esperaba Lista de" +
+                            " Expresiones o \")\"", currentToken.row,
+                            currentToken.col);
                 }
             }
         }
@@ -1314,76 +1635,43 @@ public class Parser {
                     currentToken.col);
         }
     }
-    private void Encadenado() throws IOException, LexerException,
+    private AccessNode Encadenado() throws IOException, LexerException,
             ParserException {
         match(".");
         if (isInFirstSet(Grammar.NonTerminal.Encadenado_1)) {
-            Encadenado_1();
+            return Encadenado_1();
         }
         else {
             throw new ParserException("Se esperaba Identificador de Variable" +
                     " o de Método ", currentToken.row, currentToken.col);
         }
     }
-    private void Encadenado_1() throws IOException, LexerException,
+    private AccessNode Encadenado_1() throws IOException, LexerException,
             ParserException {
+        Token token = currentToken;
         match("ID");
         if (isInFirstSet(Grammar.NonTerminal.VarOMet_1)) {
-            VarOMet_1();
+            AccessNode chain = VarOMet_1(token);
+            return chain;
         }
-        else {
-            throw new ParserException("Se esperaba \".\", \"(\" o \"[\"",
-                    currentToken.row, currentToken.col);
-        }
+        return new VarNode(token);
     }
 
-    /* Deprecated
-    private void LlamadaMetEncadenado() throws IOException, LexerException, ParserException {
-        match("ID");
-        if (isInFirstSet(Grammar.NonTerminal.ArgsActuales)) {
-            ArgsActuales();
-            if (isInFirstSet(Grammar.NonTerminal.Encadenado)) {
-                Encadenado();
-            }
-        }
-        else {
-            throw new ParserException("Se esperaba \"(\"",
-                    currentToken.row, currentToken.col);
-        }
+    /**
+     * Getter de la tabla de símbolos
+     * @return tabla de símbolos
+     */
+    public SymbolTable getSymbolTable(){
+        return symbolTable;
     }
 
-    private void AccVarEncadenado() throws IOException, LexerException, ParserException {
-        match("ID");
-        if (isInFirstSet(Grammar.NonTerminal.AccVarEncadenado_1)) {
-            AccVarEncadenado_1();
-        }
-        else {
-            throw new ParserException("Se esperaba \".\" o \"[\"",
-                    currentToken.row, currentToken.col);
-        }
+    /**
+     * Getter del AST generado
+     * @return
+     */
+    public AST getAST(){
+        return ast;
     }
 
-    private void AccVarEncadenado_1() throws IOException, LexerException, ParserException {
-        if (isInFirstSet(Grammar.NonTerminal.Encadenado)) {
-            Encadenado();
-        }
-        else {
-            if (grammar.getFollows(Grammar.NonTerminal.AccVarEncadenado_1)
-                    .contains(currentToken.getTag())) {
-                ;
-            }
-            else {
-                match("[");
-                if (isInFirstSet(Grammar.NonTerminal.Expresion)) {
-                    Expresion();
-                    match("]");
-                }
-                else {
-                    throw new ParserException("Se esperaba Expresión o \".\"",
-                            currentToken.row, currentToken.col);
-                }
-            }
-        }
-    }
-    */
+
 }

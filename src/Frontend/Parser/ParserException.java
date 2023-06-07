@@ -5,7 +5,7 @@ package Frontend.Parser;
  */
 public class ParserException extends Exception{
     public ParserException(String message, int row, int col) {
-        super("| ERROR: SINTÁCTICO | NUMERO DE COLUMNA: | DESCRIPCION: |" + "\n" +
+        super("ERROR: SINTACTICO\n| NUMERO DE LINEA: | NUMERO DE COLUMNA: | DESCRIPCION: |" + "\n" +
                 "| LINEA " + row + " | COLUMNA " + col + " | " + message +
                 " |");
     }

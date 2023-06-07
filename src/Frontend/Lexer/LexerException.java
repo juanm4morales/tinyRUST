@@ -5,7 +5,7 @@ package Frontend.Lexer;
  */
 public class LexerException extends Exception{
     public LexerException(String message, int row, int col) {
-        super("| ERROR: LEXICO | NUMERO DE COLUMNA: | DESCRIPCION: |" + "\n" +
+        super("ERROR: LEXICO\n| NUMERO DE LINEA: | NUMERO DE COLUMNA: | DESCRIPCION: |" + "\n" +
                 "| LINEA " + row + " | COLUMNA " + col + " | " + message +
                 " |");
     }

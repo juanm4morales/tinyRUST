@@ -83,8 +83,8 @@ public class Grammar {
         first.put(NonTerminal.ListaArgsFormales, new HashSet<>(
                 Arrays.asList("Bool", "I32", "Str", "Char", "CLASSID",
                         "Array")));
-        first.put(NonTerminal.ListaArgsFormales_1, new HashSet<>(
-                Arrays.asList(",",""))); // + λ
+        // first.put(NonTerminal.ListaArgsFormales_1, new HashSet<>(
+        //         Arrays.asList(",",""))); // + λ
         first.put(NonTerminal.ArgFormal, new HashSet<>(
                 Arrays.asList("Bool", "I32", "Str", "Char", "CLASSID",
                         "Array")));
@@ -110,15 +110,15 @@ public class Grammar {
                 Arrays.asList("{")));
         first.put(NonTerminal.BloqueMetodo_1, new HashSet<>(
                 Arrays.asList("Bool", "I32", "Str", "Char", "CLASSID", "Array",
-                        "if", ";", "ID", "(", "while", "{", "return", "}")));
+                        "if", ";", "ID", "(", "while", "{", "return", "}", "self")));
         first.put(NonTerminal.BloqueMetodo_2, new HashSet<>(
                 Arrays.asList("if", ";", "ID", "(", "while", "{", "return",
-                        "}")));
+                        "}", "self")));
         first.put(NonTerminal.DeclVarLocalesR, new HashSet<>(
                 Arrays.asList("Bool", "I32", "Str", "Char", "CLASSID",
                         "Array")));
         first.put(NonTerminal.SentenciaR, new HashSet<>(
-                Arrays.asList("if", ";", "ID", "(", "while", "{", "return")));
+                Arrays.asList("if", ";", "ID", "(", "while", "{", "return", "self")));
         first.put(NonTerminal.DeclVarLocales, new HashSet<>(
                 Arrays.asList("Bool", "I32", "Str", "Char", "CLASSID",
                         "Array")));
@@ -142,7 +142,7 @@ public class Grammar {
         first.put(NonTerminal.AsignVarSimple, new HashSet<>(
                 Arrays.asList("ID")));
         first.put(NonTerminal.AsignVarSimple_1, new HashSet<>(
-                Arrays.asList(".", "[", "")));
+                Arrays.asList(".", "["))); //
         first.put(NonTerminal.AsignSelfSimple, new HashSet<>(
                 Arrays.asList("self")));
         first.put(NonTerminal.EncadenadoSimpleR, new HashSet<>(
@@ -216,7 +216,7 @@ public class Grammar {
         first.put(NonTerminal.VarOMet, new HashSet<>(
                 Arrays.asList("ID")));
         first.put(NonTerminal.VarOMet_1, new HashSet<>(
-                Arrays.asList(".", "(", "")));
+                Arrays.asList(".", "(", "[")));
         // first.put(NonTerminal.AccesoVar, new HashSet<>(
         //        Arrays.asList("ID")));
         first.put(NonTerminal.LlamadaMet, new HashSet<>(
@@ -262,10 +262,10 @@ public class Grammar {
                 Arrays.asList(".", "*", "/", "%", "+", "-", "<", ">", "<=",
                         ">=", "==", "!=", "&&", "||", ")", "]", ";", ",",
                         ")")));
-        follow.put(NonTerminal.VarOMet_1, new HashSet<>(
-                Arrays.asList(".", "*", "/", "%", "+", "-", "<", ">", "<=",
-                        ">=", "==", "!=", "&&", "||", ")", "]", ";", ",",
-                        ")")));
+        //follow.put(NonTerminal.VarOMet_1, new HashSet<>(
+        //        Arrays.asList(".", "*", "/", "%", "+", "-", "<", ">", "<=",
+        //                ">=", "==", "!=", "&&", "||", ")", "]", ";", ",",
+        //                ")")));
     }
 
     /**

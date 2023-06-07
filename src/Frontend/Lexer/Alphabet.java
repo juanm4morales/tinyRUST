@@ -73,7 +73,7 @@ public class Alphabet {
     }
 
     /**
-     * Determina si el caracter es una letra
+     * Determina si el caracter es una letra.
      * @param c
      * @return
      */
@@ -81,7 +81,7 @@ public class Alphabet {
         return letters.contains(c);
     }
     /**
-     * Determina si el caracter es un número
+     * Determina si el caracter es un número.
      * @param c
      * @return
      */
@@ -89,7 +89,7 @@ public class Alphabet {
         return Character.isDigit(c);
     }
     /**
-     * Determina si el caracter esta contenido en el alfabeto de entrada
+     * Determina si el caracter esta contenido en el alfabeto de entrada.
      * @param c
      * @return
      */
