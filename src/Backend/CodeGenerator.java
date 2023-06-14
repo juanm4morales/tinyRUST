@@ -131,14 +131,14 @@ public class CodeGenerator implements VisitorCodeGen{
                     }
                 }
             }
-            methodNode.getBlock().codeGen(this);
+            // methodNode.getBlock().codeGen(this);
 
         }
 
         // AGREGAR VARIABLES LOCALES
         Collection<VarEntry> variables = currentMethod.getVariables().values();
         int varAmount = variables.size();
-        text.append("\taddiu $sp, $sp "+(-varAmount*4)+"\n");
+        text.append("\taddiu $sp, $sp, "+(-varAmount*4)+"\n");
         for (VarEntry var: variables) {
             // Solo almaceno referencias a los objetos declarados (Tipo
             // referencia)
@@ -168,7 +168,7 @@ public class CodeGenerator implements VisitorCodeGen{
             text.append("\taddiu $sp, $sp, 4\n");
             text.append("\tlw $ra, 0($sp)\n\tjr $ra\n");
         }
-        else {
+        else { // MAIN
             text.append("\taddiu $sp, $sp, 4\n");
         }
     }
@@ -326,9 +326,14 @@ public class CodeGenerator implements VisitorCodeGen{
             //
         }
 
-        text.append("\tlw $t0, -12($fp)\n");    // $t0 <- self
+
         text.append("\taddiu $sp, $sp, -4\n");  //
         text.append("\tsw $fp, 0($sp)\n");      // $fp caller
+        text.append("\taddiu $sp, $sp, -4\n");      //
+        text.append("\tlw $t0, -12($fp)\n");    // $t0 <- self
+        text.append(("\tsw $t0, 0($sp)\n"));    // Guardo self en stack
+        text.append(("\taddiu $sp, $sp, -4\n"));    // Guardo self en stack
+
         int position = 0;
         for (ExpNode exp:callNode.getParamExp()) {
             exp.codeGen(this);
