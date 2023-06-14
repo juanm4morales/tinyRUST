@@ -1,0 +1,10 @@
+class OtraClase{
+
+    create(I32: i, Bool: b1){
+
+        I32: p,q,r;
+    }
+}
+fn main(){
+    (4/2 != 2);
+}

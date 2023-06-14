@@ -1,0 +1,22 @@
+// INCORRECTO
+class A {
+    I32: num;
+
+    fn mC11(I32: n, I32: r)-> I32{
+        I32: i;
+        I32: s;
+        while (i<=n && num=="HOLA"){ // ERROR expresiones distinto tipo
+
+        }
+        return -1;
+    }
+
+}
+
+
+
+fn main(){
+    A: obj2;
+
+
+}

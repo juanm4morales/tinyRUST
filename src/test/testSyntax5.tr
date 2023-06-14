@@ -1,0 +1,13 @@
+// Se esperaba ( de apertura de expresion simple se encontro 4 - ln:5
+
+class Error1{
+
+    fn metodo()->void{
+
+        4+a);
+
+    }
+
+
+
+}

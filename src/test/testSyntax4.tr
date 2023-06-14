@@ -1,5 +1,5 @@
 class Clase {
-    I32: x;
+    I32: x, y, z;
     fn metodo(I32: n)-> I32{
         i=0; j=0; suma=0;
         while (i<=n){

@@ -1,0 +1,26 @@
+// Error semantico : El metodo d ya ha sido declarado
+class A {
+    I32: a;
+    I32: b,c;
+    fn a(I32: n)-> I32{
+        Str: s;
+    }
+    fn d()-> Str{
+        Str: s, x;
+    }
+
+    fn d()-> I32{
+            Str: x;
+        }
+
+    create(){
+
+    }
+}
+
+fn main(){
+    A: fib;
+    I32: n;
+    fib = new A();
+
+}

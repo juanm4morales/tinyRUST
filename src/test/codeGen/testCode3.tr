@@ -1,0 +1,29 @@
+//
+
+class P {
+    I32: exp;
+
+    create(I32: exp) {
+        self.exp = exp;
+    }
+
+    fn power(I32: x) -> I32{
+        if (exp==0) {
+            return 1;
+        }
+        self.exp = self.exp - 1;
+        return power(x)*x;
+    }
+}
+
+fn main(){
+    P: p;
+    I32: exp;
+    I32: num;
+    I32: pow;
+    exp = 3;
+    num = 5;
+    p = new P(exp);
+    pow = p.power(5);
+
+}

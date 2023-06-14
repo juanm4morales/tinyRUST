@@ -83,4 +83,12 @@ public class Type {
         }
         return null;
     }
+
+    public static boolean isReference(Type type) {
+        if (type instanceof ReferenceType) {
+            return true;
+        }
+        return false;
+
+    }
 }

@@ -1,0 +1,20 @@
+// Incorrecto
+class A{
+    Str: r;
+    static fn staticMethod(I32: i) -> void {
+
+    }
+}
+
+class B:A {
+
+    static fn staticMethod(I32:i) -> void { //El metodo staticMethod de la
+    // superclase A es estatico, y no puede ser redefinido por la subclase B.
+    }
+
+}
+
+
+fn main(){
+
+}

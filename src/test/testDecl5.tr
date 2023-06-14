@@ -1,0 +1,30 @@
+// Error semantico : La clase A ya ha sido declarada
+class A {
+    I32: a;
+    I32: b,c;
+    fn a(I32: n)-> I32{
+        Str: s;
+    }
+    fn d()-> Str{
+        Str: s, x;
+    }
+
+    create(){
+
+    }
+}
+
+class A {
+    Bool: b;
+
+    create(){
+
+    }
+}
+
+fn main(){
+    A: fib;
+    I32: n;
+    fib = new A();
+
+}

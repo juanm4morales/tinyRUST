@@ -1,0 +1,42 @@
+class A:B {
+    I32: a;
+    I32: b,c;
+    fn a(I32: n)-> I32{
+        Str: s;
+    }
+    fn d()-> Str{
+        Str: s, x;
+    }
+
+    create(){
+
+    }
+    fn in(I32: num) -> void{
+        (IO.out_str("f_"));
+        (IO.out_int(num));
+        (IO.out_str("="));
+    }
+    fn is(I32: s) -> void{
+        //"el valor es: ";
+        (IO.out_i32(s));
+        (IO.out_str("\n"));
+    }
+}
+
+class B {
+    I32: l;
+    pub Bool: bool;
+    fn a(I32: n)->I32{
+        Array I32: arrM;
+    }
+
+    create(){
+    }
+}
+
+fn main(){
+    A: fib;
+    I32: n;
+    fib = new A();
+    n = IO.in_i32();
+}

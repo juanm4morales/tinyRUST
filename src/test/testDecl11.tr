@@ -1,0 +1,19 @@
+class D : C{
+    R: r;
+}
+
+class A {
+   A: a;
+   fn m1() -> void{
+   //a = new D();
+
+    }
+}
+
+class C:A {
+
+}
+
+fn main(){
+
+}

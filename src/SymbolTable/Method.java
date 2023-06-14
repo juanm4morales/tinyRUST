@@ -17,6 +17,7 @@ public abstract class Method implements IJsonable {
     protected int paramAmount; // cantidad de parámetros.
     protected HashMap<String, VarEntry> variables; /* Map con las variables locales
     del método */
+    protected int varAmount;   // cantidad de variables locales.
     protected Token token;
 
     public Method(String id) {
@@ -90,6 +91,8 @@ public abstract class Method implements IJsonable {
      * que tiene variable. Retorna la entrada de la variable en caso contrario.
      */
     public VarEntry addVariable(VarEntry variable){
+        variable.setPosition(this.varAmount);
+        this.varAmount++;
         return variables.putIfAbsent(variable.getId(), variable);
     }
 
@@ -100,6 +103,14 @@ public abstract class Method implements IJsonable {
      */
     public VarEntry getVariable(String id){
         return variables.get(id);
+    }
+
+    public VarEntry getVarPar(String id) {
+        VarEntry var = getVariable(id);
+        if (var==null) {
+            return getParameter(id);
+        }
+        return var;
     }
 
     /**

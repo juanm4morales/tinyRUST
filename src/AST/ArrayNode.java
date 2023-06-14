@@ -68,6 +68,7 @@ public class ArrayNode extends VarNode{
     @Override
     public void sentenceCheck(SymbolTable symbolTable)
             throws SemanticException {
+
         if (super.parent instanceof AccessNode) {
             //
             String parentType = ((AccessNode) super.parent).chainType.getType();
@@ -78,7 +79,7 @@ public class ArrayNode extends VarNode{
             }
 
             ArrayType type = (ArrayType) symbolTable.getAttributeType(
-                    super.token.getLexeme(), parentType);
+                    token.getLexeme(), parentType);
             if (access) {
                 super.chainType = Type.createType(type.getArrayType());
             }
@@ -87,16 +88,16 @@ public class ArrayNode extends VarNode{
             }
             if (super.chainType == null) {
                 throw new SemanticException("El atributo "
-                        + super.token.getLexeme() + " no ha sido declarado en" +
+                        + token.getLexeme() + " no ha sido declarado en" +
                         " la clase "+parentType+".", super.token.row,
                         super.token.col);
             }
 
-            if (!symbolTable.isAttributePub(super.token.getLexeme(),parentType)) {
+            if (!symbolTable.isAttributePub(token.getLexeme(), parentType)) {
                 if (!Objects.equals(symbolTable.getCurrentClass().getId(), parentType)) {
                     super.chainType=null;
                     throw new SemanticException("El atributo "
-                            + super.token.getLexeme() + " de la clase "+parentType+
+                            + token.getLexeme() + " de la clase "+parentType+
                             " tiene visibilidad privada. Por lo que no ha podido ser " +
                             "accedido", super.token.row, super.token.col);
                 }
@@ -112,9 +113,9 @@ public class ArrayNode extends VarNode{
                 if (access) {
                     super.chainType = Type.createType(type.getArrayType());
                 }
-                else {
-                    super.chainType = type;
-                }
+                //else {  // Constructor
+                //    super.chainType = type;
+                //}
 
                 if (super.chainType == null) {
                     throw new SemanticException("La variable " +
@@ -122,6 +123,12 @@ public class ArrayNode extends VarNode{
                             "declarada.", super.token.row,
                             super.token.col);
 
+                }
+            }
+            else {  // Constructor
+                if (!access) {
+                    super.size = Integer.parseInt(indexExp.token.getLexeme());
+                    super.chainType = type;
                 }
             }
         }

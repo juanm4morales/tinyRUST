@@ -1,0 +1,11 @@
+class B {
+    I32: num;
+    fn m2()->void{
+        ;
+    }
+}
+
+
+fn main(){
+    ((new B()).m2());
+}

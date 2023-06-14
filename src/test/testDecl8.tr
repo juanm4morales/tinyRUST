@@ -1,0 +1,16 @@
+// Correcto
+class A : IO{
+    create(){
+
+    }
+}
+
+class B : Object{
+    create(){
+
+    }
+}
+
+fn main(){
+
+}

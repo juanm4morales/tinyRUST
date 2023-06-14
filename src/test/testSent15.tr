@@ -1,0 +1,30 @@
+// Correcto
+class Clase1 {
+
+
+    create(I32:i){
+        ;
+    }
+
+    static fn m_() -> void {
+
+    }
+
+}
+
+class Clase2:Clase1{
+
+
+}
+
+class Clase3:Clase2{
+
+
+}
+
+
+fn main(){
+    Clase1: a;
+    a = new Clase3();
+
+}

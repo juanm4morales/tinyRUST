@@ -1,0 +1,11 @@
+// OK
+
+class A {
+    I32: a;
+}
+
+fn main(){
+    I32: sum;
+    sum = 5 + 3;
+
+}

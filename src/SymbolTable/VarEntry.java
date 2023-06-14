@@ -14,6 +14,8 @@ public class VarEntry implements IJsonable {
     protected Type type;    // Tipo de la variable
     protected Token token;  // Token asociado a la variable
     protected int position; // Posición de la declaración dentro del alcance
+    private int size=1;     // Tamaño de la variable. Útil para cadenas,
+    // arreglos y objetos
 
     public VarEntry(String id, Type type) {
         this.id = id;
@@ -28,6 +30,9 @@ public class VarEntry implements IJsonable {
         return id;
     }
 
+    public int getSize() {
+        return size;
+    }
     /**
      * Getter del tipo de la variable.
      * @return Tipo de la variable.
@@ -35,6 +40,7 @@ public class VarEntry implements IJsonable {
     public Type getType() {
         return type;
     }
+
 
     /**
      * Getter del token asociado a la variable.
@@ -44,6 +50,9 @@ public class VarEntry implements IJsonable {
         return token;
     }
 
+    public int getPosition() {
+        return position;
+    }
     /**
      * Setter del token asociado a la variable.
      * @param token Token asociado a la variable.
@@ -52,6 +61,9 @@ public class VarEntry implements IJsonable {
         this.token = token;
     }
 
+    public void setSize(int size) {
+        this.size = size;
+    }
     /**
      * Setter de la posición de la declaración de la variable en el ámbito
      * correspondiente.

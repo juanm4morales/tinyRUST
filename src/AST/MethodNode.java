@@ -41,7 +41,9 @@ public class MethodNode extends Node {
     @Override
     public void sentenceCheck(SymbolTable symbolTable) throws SemanticException {
         symbolTable.setCurrentMethod(name);
-        block.sentenceCheck(symbolTable);
+        if (block != null) {
+            block.sentenceCheck(symbolTable);
+        }
     }
 
     @Override

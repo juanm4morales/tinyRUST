@@ -26,4 +26,14 @@ public abstract class AccessNode extends ExpNode{
         this.chain = chain;
     }
 
+    public AccessNode getChain() {
+        return chain;
+    }
+
+    public boolean firstInChain() {
+        if (super.parent instanceof AccessNode) {
+            return false;
+        }
+        return true;
+    }
 }

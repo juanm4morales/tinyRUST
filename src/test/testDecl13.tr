@@ -1,0 +1,18 @@
+class A{
+    Str: r;
+    fn m1(I32: i) -> void {
+
+    }
+}
+
+class B:A {
+
+    fn m1(I32:i) -> I32 {
+    }
+
+}
+
+
+fn main(){
+
+}

@@ -1,0 +1,36 @@
+// Error semantico : El atributo heredado "a" no puede ser redefinido.
+class A {
+    I32: a;
+    I32: b,c;
+    fn a(I32: n)-> I32{
+        Str: s;
+    }
+    fn d()-> Str{
+        Str: s, x;
+    }
+
+    create(){
+
+    }
+}
+
+class B:A {
+    Bool: b;
+    I32: a;
+
+    // redefinicion de metodo heredado
+    fn a(I32: n)-> I32{
+            Str: s;
+    }
+
+    create(){
+
+    }
+}
+
+fn main(){
+    A: fib;
+    I32: n;
+    fib = new A();
+
+}

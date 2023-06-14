@@ -1,0 +1,35 @@
+// Incorrecto
+class Clase1 {
+    pub Array I32: arr;
+    fn m(I32: l, I32: x, Str: s, Bool: b) -> I32 {
+
+        return l;
+    }
+    create(I32:i){
+        arr = new I32[8];
+        ;
+    }
+
+    static fn m_() -> void {
+
+    }
+
+}
+
+class Clase2:Clase1{
+
+
+}
+
+class Clase3:Clase2{
+
+
+}
+
+
+fn main(){
+    I32: resultado;
+
+
+
+}

@@ -7,6 +7,8 @@ import Frontend.Parser.SemanticException;
 import SymbolTable.SymbolTable;
 import Utils.StringUtils;
 
+import java.util.Objects;
+
 /**
  * Esta clase representa un Nodo de Asignación de un valor a una variable. En
  * el lado izquierdo (leftSide) hay un Nodo Variable, y en el lado derecho
@@ -40,6 +42,14 @@ public class AssignNode extends SentenceNode {
         this.rightSide = rightSide;
     }
 
+    public VarNode getLeftSide() {
+        return leftSide;
+    }
+
+    public ExpNode getRightSide() {
+        return rightSide;
+    }
+
     /**
      * Setter del lado izquierdo y derecho del Nodo asignación. Además establece como
      * padre de estos a la instancia actual.
@@ -62,6 +72,15 @@ public class AssignNode extends SentenceNode {
                     "("+rightSide.type+"), no es " + leftSide.type + " ni de" +
                     " una subclase de este.", leftSide.token.row,
                     leftSide.token.col);
+        }
+        if (Objects.equals(righType, "Array")) {
+            if (rightSide instanceof ArrayNode) {
+                leftSide.setSize(((ArrayNode)rightSide).getSize());
+            }
+            else {
+                System.err.println("DEBUG PURPOSE: ERROR al castear ExpNode a" +
+                        " ArrayNode");
+            }
         }
     }
 

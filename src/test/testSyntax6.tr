@@ -1,0 +1,9 @@
+class OtraClase{
+
+    create(I32: i, Bool: b1){
+
+        TipoBase: p,q,r; //<-  esta es la linea 6 la cual no tienen ningun inconveniente.
+    }
+}
+fn main(){
+}

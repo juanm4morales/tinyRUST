@@ -1,0 +1,22 @@
+// Error semantico : La clase B no esta declarada
+class A:B {
+    I32: a;
+    I32: b,c;
+    fn a(I32: n)-> I32{
+        Str: s;
+    }
+    fn d()-> Str{
+        Str: s, x;
+    }
+
+    create(){
+
+    }
+}
+
+fn main(){
+    A: fib;
+    I32: n;
+    fib = new A();
+
+}

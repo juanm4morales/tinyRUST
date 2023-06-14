@@ -1,0 +1,51 @@
+// INCORRECTO
+class Clase2 {
+    Array I32: arr;
+    I32: l;
+    Str: hi;
+    I32: numero;
+
+    fn m2(Bool: b1, Str: str1)  -> void {
+        b1 = true;
+    }
+
+    fn m1()->I32 {
+        hi = "hi";
+        l = 65;
+        numero = 0;
+
+        while (false) {
+            if (numero==l) {
+                l = 5;
+                if (hi=="hi") {
+                    return 0;
+
+                }
+            }
+            else {
+                return -+1;
+
+            }
+        }
+
+        return -54654;
+
+
+    }
+
+    create() {
+        arr = new I32 [5*-8];
+    }
+}
+
+
+fn main(){
+    Clase2: obj2;
+    I32: n;
+    Str: sss;
+    sss = "hi";
+    obj2 = new Clase2();
+    n = IO.in_i32();
+    self.n = 4; // No se puede utilizar la referencia "self" en el main.
+
+}

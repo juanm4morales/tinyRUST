@@ -196,6 +196,10 @@ public class Parser {
         symbolTable.setCurrentClass(c);
         if (isInFirstSet(Grammar.NonTerminal.Clase_1)){
             ClassNode classN = new ClassNode(token);
+            MethodNode defaultConstructor = new MethodNode();
+            defaultConstructor.setBlock(new BlockNode());
+            defaultConstructor.setName(token.getLexeme());
+            classN.setConstructor(defaultConstructor);
             classN.setName(token.getLexeme());
             Clase_1(classN);
             return classN;
@@ -1543,12 +1547,20 @@ public class Parser {
             // Constructor de Array
             PrimitiveType type = TipoPrimitivo(); // Se termina de declarar al inicializar
             match("[");
-            if (isInFirstSet(Grammar.NonTerminal.Expresion)) {
-                ExpNode exp = Expresion(); // Debe ser I32
+            //if (isInFirstSet(Grammar.NonTerminal.Expresion)) {
+            //    ExpNode exp = Expresion(); // Debe ser I32
+            //    match("]");
+            //    ArrayNode arrayConst = new ArrayNode(null);
+            //    arrayConst.setType(type.getType());
+            //    arrayConst.setIndexExp(exp);
+            //    return arrayConst;
+            //}
+            if (isInFirstSet(Grammar.NonTerminal.Literal)) {
+                LiteralNode literalI32 = Literal(); // Debe ser I32
                 match("]");
                 ArrayNode arrayConst = new ArrayNode(null);
                 arrayConst.setType(type.getType());
-                arrayConst.setIndexExp(exp);
+                arrayConst.setIndexExp(literalI32);
                 return arrayConst;
             }
             else {

@@ -4,6 +4,7 @@ import java.util.Hashtable;
 // NO UTILIZADA de momento
 // Tabla con valores de las etiquetas para palabras reservadas,
 // identificadores y tokens compuestos
+@Deprecated
 public class Tag {
     public final static int
     CLASS = 256,      //

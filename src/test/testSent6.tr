@@ -1,0 +1,19 @@
+// ERROR
+class Clase2 {
+
+    Array I32: arr;
+    create() {
+        arr = new Str [5*-8]; //  El tipo de la expresion derecha (Array[Str]), no es Array[I32]. |
+    }
+}
+
+
+fn main(){
+    Clase2: obj2;
+    I32: n;
+    Str: sss;
+    sss = "hi";
+    obj2 = new Clase2();
+    n = IO.in_i32();
+
+}

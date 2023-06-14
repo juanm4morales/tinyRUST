@@ -1,0 +1,96 @@
+// Correcto
+class Clase1 {
+    I32: num;
+    I32: i,j;
+    Str: cadena;
+    Array I32: arr;
+    fn mC11(I32: n, Clase2: r)-> I32{
+        i=0; j=i%3; num=3*2/(i/j);
+        while (i<=n && num==3){
+            if (i==0){
+                (imprimo_numero(i));
+                (imprimo_sucesion(num));
+            }
+            else if(i==1){
+                num=num+i;
+                (r.mC21(8*++++-9/(4%(9*-3))));
+            }
+            else{
+                (imprimo_sucesion(num));
+            }
+        }
+        arr = new I32[5*num];
+        return -1;
+    }
+
+    create(){
+        i=0;
+        j=0;
+        num=0;
+        cadena="";
+    }
+    fn imprimo_numero(I32: num) -> void{
+        (IO.out_str("f_"));
+        (IO.out_i32(num));
+        (IO.out_str("="));
+    }
+    fn imprimo_sucesion(I32: s) -> void{
+        //"el valor es: ";
+        (Clase2.mSC2("hi!"));
+        (IO.out_i32(s));
+        (IO.out_str("\n"));
+    }
+    static fn m_() -> void {
+        Clase2: o1;
+        o1 = new Clase2();
+        (o1.objeto3.obj13.imprimo_numero(4*3));
+    }
+
+}
+
+class Clase2: Clase1 {
+    pub I32: numC2;
+    pub Clase3: objeto3;
+    
+
+    static fn mSC2(Str: s) -> void {
+        (IO.out_str(s));
+    }
+
+    fn mC21(I32: numC2) -> I32 {
+        self.numC2 = numC2;
+        return self.numC2*8;
+    }
+    fn imprimo_numero(Str: cadena) -> void{
+        (IO.out_str(cadena));
+    }
+
+    create() {
+        i=0;
+        j=0;
+        num=0;
+        numC2=0;
+        cadena="";
+    }
+
+}
+
+class Clase3:Clase2 {
+    pub Clase1: obj13;
+    Array I32: arr2;
+    create() {
+        arr = new I32 [5*-8];
+    }
+}
+
+
+fn main(){
+    Clase2: obj2;
+    I32: n;
+    Str: sss;
+    sss = "hi";
+    obj2 = new Clase2();
+    n = IO.in_i32();
+    (obj2.imprimo_numero(sss));
+
+}

@@ -128,6 +128,7 @@ public class SymbolTable implements IJsonable {
     public ClassEntry getClass(String classId){
         return classTable.get(classId);
     }
+
     public ClassEntry getMeth(String classId){
         return classTable.get(classId);
     }
@@ -164,6 +165,32 @@ public class SymbolTable implements IJsonable {
         }
 
     }
+
+    //
+    public VarEntry getVariable(String varId, Method method,
+                                ClassEntry classEntry) {
+        VarEntry var;
+        var = method.getVarPar(varId);
+        if (var==null) {
+            if (classEntry!=null) {
+                var = classEntry.getVariable(varId);
+            }
+        }
+        return var;
+    }
+    public VarEntry getVariable(String varId, Method method) {
+        return method.getVarPar(varId);
+
+    }
+
+    public AttributeEntry getAttribute(String varId, ClassEntry classEntry) {
+        return classEntry.getVariable(varId);
+
+    }
+
+    //
+
+
     // ------------------------------------------------------------------------ //
     // --------- METODOS USADOS POR AST (para chequeo de sentencias) ---------- //
 

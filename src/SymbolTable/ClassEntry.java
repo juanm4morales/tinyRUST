@@ -247,6 +247,10 @@ public class ClassEntry implements IJsonable {
         return constructor;
     }
 
+    public int getAttrAmount() {
+        return attrAmount;
+    }
+
     /**
      * Agrega, si no existe, un atributo declarado al map de atributos.
      * @param variable Entrada del atributo declarado.

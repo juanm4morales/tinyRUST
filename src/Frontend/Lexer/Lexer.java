@@ -51,6 +51,7 @@ public class Lexer{
         words.put("self","self");
         words.put("create","create");
         words.put("I32","I32");
+        words.put("Bool","Bool");
         words.put("Str","Str");
         words.put("Char","Char");
         words.put("Array","Array");

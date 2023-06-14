@@ -54,6 +54,9 @@ public class MethodEntry extends Method {
         return returnType;
     }
 
+    public int getPosition() {
+        return this.position;
+    }
 
     /**
      * Incrementa la posición del método en lo que indique el parámetro inc.

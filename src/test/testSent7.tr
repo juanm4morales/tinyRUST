@@ -1,0 +1,27 @@
+// ERROR
+class Clase2 {
+    Array I32: arr;
+    I32: l;
+    Str: hi;
+
+
+    fn m1()->I32 {
+        hi = "hi";
+        return hi; // El tipo de la expresion a retornar(Str) debe ser I32. |
+    }
+
+    create() {
+        arr = new I32 [5*-8];
+    }
+}
+
+
+fn main(){
+    Clase2: obj2;
+    I32: n;
+    Str: sss;
+    sss = "hi";
+    obj2 = new Clase2();
+    n = IO.in_i32();
+
+}

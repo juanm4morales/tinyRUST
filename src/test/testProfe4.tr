@@ -1,0 +1,31 @@
+class B {
+    I32: num;
+    fn m2()->void{
+        ;
+    }
+    fn m3()->B{
+        B: b;
+        b = new B();
+        return b;
+        ;
+    }
+}
+class A {
+    fn m2(Bool: boo, B: be) -> void {
+        ;
+    }
+
+    fn m1() -> void {
+        I32: p1;
+        I32: v1;
+        p1=20;
+        v1=0;
+        (m2(p1+(v1-10)>0||true, new B()));
+    }
+
+
+}
+
+fn main(){
+
+}

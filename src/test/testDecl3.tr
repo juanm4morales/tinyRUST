@@ -1,0 +1,21 @@
+// Error semantico : La variable local ya ha sido declarada en el metodo
+class A {
+    I32: a;
+    I32: b,c;
+    fn a(I32: n)-> I32{
+        Str: s;
+    }
+
+
+    create(){
+
+    }
+}
+
+fn main(){
+    A: fib;
+    I32: n;
+    Str: n;
+    fib = new A();
+
+}

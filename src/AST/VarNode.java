@@ -17,6 +17,7 @@ import java.util.Objects;
  * Los acceso que incluye son a: atributos self, atributos, variables.
  */
 public class VarNode extends AccessNode {
+    protected int size;
 
     public VarNode(Token token) {
         super.token = token;
@@ -27,6 +28,13 @@ public class VarNode extends AccessNode {
         super.type = type;
     }
 
+    public void setSize(int size) {
+        this.size = size;
+    }
+
+    public int getSize() {
+        return size;
+    }
 
     @Override
     public void sentenceCheck(SymbolTable symbolTable)

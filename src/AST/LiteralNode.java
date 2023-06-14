@@ -19,6 +19,10 @@ public class LiteralNode extends ExpNode {
         this.type = type;
     }
 
+    public Token getToken(){
+        return token;
+    }
+
     @Override
     public void sentenceCheck(SymbolTable symbolTable) throws SemanticException {
         if (type==null) {

@@ -1,0 +1,19 @@
+class B {
+    I32: num;
+    fn m2()->void{
+        ;
+    }
+    fn m3()->B{
+        B: b;
+        b = new B();
+        return b;
+        ;
+    }
+}
+
+
+fn main(){
+    B: p1;
+    p1 = new B();
+    ((p1).m3().m2());
+}

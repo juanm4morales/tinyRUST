@@ -1,0 +1,55 @@
+// Tipos incompatibles en el "||" - ln: 11
+
+
+class A {
+
+    I32: a1;
+
+    Bool: a2;
+
+
+
+    fn m1(B: p1)->void
+
+    {
+
+        I32: v1;
+
+        Bool: v2;
+
+        (p1.m3() || m2());
+
+    }
+
+
+
+    fn m2()->I32
+
+    { return 0;}
+
+
+
+
+
+
+}
+
+
+
+class B : A{
+
+    fn m3()->I32
+
+    { return 0;}
+
+
+
+    fn m4()->I32
+
+    { return 0;}
+
+}
+
+
+
+fn main(){}

@@ -1,0 +1,60 @@
+// Correcto
+class Clase1 {
+    I32: num;
+    I32: i,j;
+    Str: cadena;
+    Array I32: arr;
+    fn mC11(I32: n, Str: r)-> I32{
+        i=0; j=i%3; num=3*2/(i/j);
+        while (i<=n && num==3){
+            if (i==0){
+
+            }
+            else if(i==1){
+                num=num+i;
+            }
+            else{
+            }
+        }
+        arr = new I32[5*num];
+        return -1;
+    }
+
+    create(I32:i){
+        I32: numerito;
+        self.i = i; // El atributo i de la clase Clase1 tiene visibilidad
+        // privada. Por lo que no ha podido ser accedido |
+        j=0;
+        num=0;
+        cadena="";
+    }
+
+    static fn m_() -> void {
+
+    }
+
+}
+
+
+
+class Clase3{
+    Clase1: obj13;
+    Array I32: arr;
+    create() {
+        arr = new I32 [5*-8];
+    }
+    fn m32(I32: x, I32: y, Str: z) -> void {
+        I32: resultado;
+        obj13 = new Clase1(5*7);
+        resultado = obj13.mC11(4,"xd");
+    }
+}
+
+
+fn main(){
+    I32: n;
+    Str: sss;
+    sss = "hi";
+    n = IO.in_i32();
+
+}

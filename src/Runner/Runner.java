@@ -1,6 +1,7 @@
-package Frontend.Runner;
+package Runner;
 
 import AST.AST;
+import Backend.CodeGenerator;
 import Frontend.FileReaderWriter;
 import Frontend.Lexer.LexerException;
 import Frontend.Lexer.Token;
@@ -20,7 +21,7 @@ import java.util.ArrayList;
  */
 public class Runner {
     ArrayList<Token> tokens;    // Arreglo de tokens del código fuente
-    String path;                // Direción del archivo a escanear
+    String path;                // Dirección del archivo a escanear
     boolean error;              // Atributo que determina si ha habido un error
     // Constructor de clase
     public Runner(String path){
@@ -52,21 +53,26 @@ public class Runner {
             System.err.println(e.getMessage());
         }
         if (!error){
-            System.out.println("CORRECTO: ANALISIS SEMANTICO");
+            // System.out.println("CORRECTO: ANALISIS SEMANTICO");
             SymbolTable symbolTable = parser.getSymbolTable();
             symbolTable.setFileName(FileReaderWriter.getFileName(path));
-            String sT_JSON = symbolTable.toJson(0);
+            // String sT_JSON = symbolTable.toJson(0);
             String filename = FileReaderWriter.getFileNameWithoutExt(path);
-            FileReaderWriter.write(sT_JSON, filename.concat(".json") );
+            // FileReaderWriter.write(sT_JSON, filename.concat(".json") );
 
             AST ast = parser.getAST();
-            ast.setFileName(FileReaderWriter.getFileName(path));
-            String ast_JSON = ast.toJson(0);
-            FileReaderWriter.write(ast_JSON, filename.concat(".ast.json") );
+            // ast.setFileName(FileReaderWriter.getFileName(path));
+            // String ast_JSON = ast.toJson(0);
+            // FileReaderWriter.write(ast_JSON, filename.concat(".ast.json") );
+
+            // Generacion de codigo
+            CodeGenerator codeGenerator = new CodeGenerator(symbolTable);
+            ast.codeGen(codeGenerator);
+            String asm = codeGenerator.getCode();
+            FileReaderWriter.write(asm, filename.concat(".asm"));
+
 
         }
-
-
 
     }
     /**

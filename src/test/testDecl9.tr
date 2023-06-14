@@ -1,0 +1,28 @@
+class A : B{
+
+    static fn m1(C:a) -> B {
+    B: b;
+    b = new B();
+    return b;
+
+    }
+    create(){
+
+    }
+}
+
+class B {
+    create(){
+
+    }
+}
+
+class C {
+    create(){
+
+    }
+}
+
+fn main(){
+
+}

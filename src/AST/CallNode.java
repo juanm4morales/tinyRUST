@@ -67,6 +67,21 @@ public class CallNode extends AccessNode {
         return null;
     }
 
+    public Token getStaticClassT() {
+        return staticClassT;
+    }
+
+    public ArrayList<ExpNode> getParamExp() {
+        return paramExp;
+    }
+
+    public boolean isStatic() {
+        if (staticClassT==null) {
+            return false;
+        }
+        return true;
+    }
+
     @Override
     public void sentenceCheck(SymbolTable symbolTable) throws SemanticException {
         String methodId;

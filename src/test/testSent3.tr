@@ -1,0 +1,47 @@
+// INCORRECTO
+class A {
+    I32: num;
+    C: ccc;
+    static fn mA() -> A {
+        Str: st;
+        A: a;
+        (IO.out_str(st));
+
+        a = new A();
+        return a;
+    }
+
+    fn mC11(I32: n, I32: r)-> I32{
+        I32: i;
+        I32: s;
+        while (i<=n){
+            i = (i==s && !i); // El operador unario ! debe ser utilizado con expresiones del tipo Bool. |
+        }
+        return -1;
+    }
+
+}
+
+class B:A {
+    Bool: b;
+    fn mB(I32: numero) -> void {
+        b=(7*mA().ccc.cNum+-9==numero);
+    }
+
+
+}
+class C {
+    I32: cNum;
+
+    create() {
+        cNum=0;
+    }
+}
+
+
+
+fn main(){
+    A: obj2;
+
+
+}
