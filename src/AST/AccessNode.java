@@ -48,6 +48,14 @@ public abstract class AccessNode extends ExpNode{
      * actual.
      * @return
      */
+
+    public void addChain(AccessNode chain) {
+        AccessNode currentChain = this.chain;
+        while (currentChain.getChain()!=null) {
+            currentChain = currentChain.getChain();
+        }
+        currentChain.setChain(chain);
+    }
     public boolean firstInChain() {
         if (super.parent instanceof AccessNode) {
             return false;

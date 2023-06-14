@@ -310,17 +310,23 @@ public class CodeGenerator implements VisitorCodeGen{
 
     @Override
     public void visit(CallNode callNode) {
-        String classId;
-        String methodId;
-        String vtableId;
+        String classId = "";
+        String methodId = "";
+        String vtableId = "";
         int methodPosition = 0;
         boolean constructor = false;
 
-        classId = chainedTo.getId();
+
+        if (chainedTo!=null) {
+            classId = chainedTo.getId();
+            vtableId = classId + "_vtable";
+        }
+
         methodId = callNode.getToken().getLexeme();
-        vtableId = classId + "_vtable";
+
         if (callNode.firstInChain()) {
             if (callNode.isStatic()){
+                classId = callNode.getStaticClassT().getLexeme();
                 ClassEntry staticClass =
                         symbolTable.getClass(callNode.getStaticClassT()
                                 .getLexeme());
@@ -337,7 +343,7 @@ public class CodeGenerator implements VisitorCodeGen{
             methodPosition = chainedTo.getMethod(methodId).getPosition();
         }
         text.append("# LLamado \n");
-        if (!constructor) {
+        if (!constructor && !callNode.isStatic()) {
 
             // Cargamos referencia a la VT del objeto
             text.append("\tla $t0, "+vtableId+"\n");
@@ -360,7 +366,7 @@ public class CodeGenerator implements VisitorCodeGen{
             text.append("\tlw $t0, "+(-c_self_position*4)+"($fp)\n");
         }
 
-        text.append(("\tsw $t0, 0($sp)\n"));    // Guardo self en stack
+        text.append(("\tsw $t0, 0($sp)\n"));        // Guardo self en stack
         text.append(("\taddiu $sp, $sp, -4\n"));    // Guardo self en stack
 
         int position = 0;
@@ -371,11 +377,14 @@ public class CodeGenerator implements VisitorCodeGen{
             position++;
         }
         text.append("\taddiu $fp, $sp, "+(12+4*position)+"\n"); // nuevo $fp
-        if (!constructor) {
+        if (!constructor && !callNode.isStatic()) {
             text.append("\tjalr $t1\n");
         }
+        else if (!callNode.isStatic()) {
+            text.append("\tjal "+classId+"_"+methodId+"\n");
+        }
         else {
-            text.append("\tjal "+classId+"_"+classId+"\n");
+            text.append("\tjal "+classId+"_"+methodId+"\n");
         }
         constructor = false;
 
@@ -578,14 +587,24 @@ public class CodeGenerator implements VisitorCodeGen{
      */
     private void predCodeGen() {
         text.append("IO_out_string:\n");
-        text.append("\tsw $ra, 0($fp)\n\tlw $a0, 4($sp)\n\tli $v0, 4\n" +
-                "\tsyscall\n\taddiu $sp, $sp, 8\n\tlw $fp, 0($sp)\n" +
-                "\taddiu $sp, $sp, 4\n\tjr $ra\n");
+        text.append("\tsw $ra, 0($fp)\n" +
+                "\tlw $a0, 4($sp)\n" +
+                "\tli $v0, 4\n" +
+                "\tsyscall\n" +
+                "\taddiu $sp, $sp, 8\n" +
+                "\tlw $fp, 0($sp)\n" +
+                "\taddiu $sp, $sp, 4\n" +
+                "\tjr $ra\n");
 
         text.append("IO_out_i32:\n");
-        text.append("\tsw $ra, 0($fp)\n\tlw $a0, 4($sp)\n\tli $v0, 1\n" +
-                "\tsyscall\n\taddiu $sp, $sp, 8\n\tlw $fp, 0($sp)\n" +
-                "\taddiu $sp, $sp, 4\n\tjr $ra\n");
+        text.append("\tsw $ra, 0($fp)\n" +
+                "\tlw $a0, 12($fp)\n" +
+                "\tli $v0, 1\n" +
+                "\tsyscall\n" +
+                "\taddiu $sp, $sp, 12\n" +
+                "\tlw $fp, 0($sp)\n" +
+                "\taddiu $sp, $sp, 4\n" +
+                "\tjr $ra\n");
 
         text.append("IO_out_bool:\n");
         text.append("\tsw $ra, 0($fp)\n\tlw $a0, 4($sp)\n\tli $v0, 1\n" +

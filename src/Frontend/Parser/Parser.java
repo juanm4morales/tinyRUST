@@ -1407,7 +1407,8 @@ public class Parser {
             if (isInFirstSet(Grammar.NonTerminal.Encadenado)) {
                 try {
                     AccessNode chained = Encadenado();
-                    ((AccessNode) exp).setChain(chained);
+                    // ((AccessNode) exp).setChain(chained);
+                    ((AccessNode) exp).addChain(chained);
                     return exp;
                 } catch (ClassCastException e) {
                     System.err.println("Parser.ExprPar(). "+e.getMessage());

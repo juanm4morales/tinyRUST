@@ -66,14 +66,14 @@ public class AssignNode extends SentenceNode {
         leftSide.sentenceCheck(symbolTable);
         rightSide.sentenceCheck(symbolTable);
         String leftType = leftSide.type.getType();
-        String righType = rightSide.type.getType();
-        if (!symbolTable.satisfiesPolymorphism(leftType,righType)) {
+        String rightType = rightSide.type.getType();
+        if (!symbolTable.satisfiesPolymorphism(leftSide.type,rightSide.type)) {
             throw new SemanticException("El tipo de la expresión derecha " +
                     "("+rightSide.type+"), no es " + leftSide.type + " ni de" +
                     " una subclase de este.", leftSide.token.row,
                     leftSide.token.col);
         }
-        if (Objects.equals(righType, "Array")) {
+        if (Objects.equals(rightType, "Array")) {
             if (rightSide instanceof ArrayNode) {
                 leftSide.setSize(((ArrayNode)rightSide).getSize());
             }

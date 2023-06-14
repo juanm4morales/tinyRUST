@@ -66,10 +66,15 @@ public class Runner {
             // FileReaderWriter.write(ast_JSON, filename.concat(".ast.json") );
 
             // Generacion de codigo
+
             CodeGenerator codeGenerator = new CodeGenerator(symbolTable);
             ast.codeGen(codeGenerator);
             String asm = codeGenerator.getCode();
             FileReaderWriter.write(asm, filename.concat(".asm"));
+
+
+
+
 
 
         }
