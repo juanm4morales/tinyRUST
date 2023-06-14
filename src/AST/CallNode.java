@@ -82,6 +82,10 @@ public class CallNode extends AccessNode {
         return true;
     }
 
+    public boolean isConstructor() {
+        return isConstructor;
+    }
+
     @Override
     public void sentenceCheck(SymbolTable symbolTable) throws SemanticException {
         String methodId;

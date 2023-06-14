@@ -36,6 +36,7 @@ public class VarNode extends AccessNode {
         return size;
     }
 
+
     @Override
     public void sentenceCheck(SymbolTable symbolTable)
             throws SemanticException {

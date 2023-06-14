@@ -25,6 +25,11 @@ public class CodeGenerator implements VisitorCodeGen{
     // flags útiles
     private static boolean f_getVal = true;
     private static boolean f_self = false;
+    private static boolean f_main = false;
+
+    private static int v_asgm_pos = 0;
+
+    private static int c_self_position = 2;
 
 
 
@@ -44,9 +49,11 @@ public class CodeGenerator implements VisitorCodeGen{
             classNode.codeGen(this);
         }
         MethodNode main = ast.getMain();
+        f_main = true;
         currentClass = null;
         currentMethod = symbolTable.getMain();
         main.codeGen(this);
+        f_main = false;
     }
 
     @Override
@@ -200,9 +207,16 @@ public class CodeGenerator implements VisitorCodeGen{
         leftSide.codeGen(this);
         f_getVal = true;
         text.append("\tmove $t1, $a0\n");
+        // ACAAAAAAA
         ExpNode rightSide = assignNode.getRightSide();
+        if (rightSide instanceof CallNode) {
+            if (((CallNode) rightSide).isConstructor()) {
+                c_self_position = v_asgm_pos;
+            }
+        }
 
         rightSide.codeGen(this);
+        /// Y ACAAA
         text.append("\tsw $a0, ($t1)\n");
         text.append("#FIN_ASIGNACION\n");
     }
@@ -249,7 +263,7 @@ public class CodeGenerator implements VisitorCodeGen{
 
             }
             else {
-
+                // NO SE PUEDE ACCEDER A ATRIBUTOS PUBS y tampoco ..
             }
             return;
         }
@@ -258,9 +272,13 @@ public class CodeGenerator implements VisitorCodeGen{
             if (Objects.equals(varNode.getToken().getLexeme(), "self")) {
                 f_self = true;
                 chainedTo = currentClass;
+                c_self_position = 2;
                 chainVar.codeGen(this);
             }
             else {
+                chainedTo =
+                        symbolTable.getClass(varNode.getChainType().getType());
+                chainVar.codeGen(this);
 
             }
         } else {
@@ -272,6 +290,7 @@ public class CodeGenerator implements VisitorCodeGen{
             }
 
             position = varST.getPosition();
+            v_asgm_pos = position+3; // offset 3 ($ra call, $fp call, self)
             text.append("\tmove $a0, $fp\n");
             if (f_self) {
                 text.append("\taddiu $a0, $a0, -8\n");
@@ -319,6 +338,7 @@ public class CodeGenerator implements VisitorCodeGen{
         }
         text.append("# LLamado \n");
         if (!constructor) {
+
             // Cargamos referencia a la VT del objeto
             text.append("\tla $t0, "+vtableId+"\n");
             // Cargamos el label del metodo correspondiente
@@ -330,7 +350,16 @@ public class CodeGenerator implements VisitorCodeGen{
         text.append("\taddiu $sp, $sp, -4\n");  //
         text.append("\tsw $fp, 0($sp)\n");      // $fp caller
         text.append("\taddiu $sp, $sp, -4\n");      //
-        text.append("\tlw $t0, -12($fp)\n");    // $t0 <- self
+        //
+        if (!f_main) {
+            text.append("\tlw $t0, "+(-c_self_position*4)+"($fp)\n");    // $t0
+            // <- self
+        }
+        // REPETIDO SE PUEDE BORRAR condicional (!!!!!!!!!!!!!!)
+        else {
+            text.append("\tlw $t0, "+(-c_self_position*4)+"($fp)\n");
+        }
+
         text.append(("\tsw $t0, 0($sp)\n"));    // Guardo self en stack
         text.append(("\taddiu $sp, $sp, -4\n"));    // Guardo self en stack
 
@@ -348,6 +377,7 @@ public class CodeGenerator implements VisitorCodeGen{
         else {
             text.append("\tjal "+classId+"_"+classId+"\n");
         }
+        constructor = false;
 
     }
     /**
@@ -364,17 +394,17 @@ public class CodeGenerator implements VisitorCodeGen{
         switch (binExpNode.getToken().getLexeme()) {
             // Operador aritmetico
             case "+":
-                text.append("\tadd $a0 $t0 $a0\n");
+                text.append("\tadd $a0, $t0, $a0\n");
                 break;
             case "-":
-                text.append("\tsub $a0 $t0 $a0\n");
+                text.append("\tsub $a0, $t0, $a0\n");
                 break;
             case "*":
-                text.append("\tmul $a0 $t0 $a0\n");
+                text.append("\tmul $a0, $t0, $a0\n");
                 break;
             case "/":
                 // CONTROL DIVISIÓN POR CERO
-                text.append("\tdiv $a0 $t0 $a0\n");
+                text.append("\tdiv $a0, $t0, $a0\n");
                 break;
             case "%":
                 // CONTROL DIVISIÓN POR CERO
@@ -383,30 +413,30 @@ public class CodeGenerator implements VisitorCodeGen{
                 break;
             // Operador relacional
             case "<":
-                text.append("\tslt $a0, $t0 $a0\n");
+                text.append("\tslt $a0, $t0, $a0\n");
                 break;
             case "<=":
-                text.append("\tsle $a0, $t0 $a0\n");
+                text.append("\tsle $a0, $t0, $a0\n");
                 break;
             case ">":
-                text.append("\tsgt $a0, $t0 $a0\n");
+                text.append("\tsgt $a0, $t0, $a0\n");
                 break;
             case ">=":
-                text.append("\tsge $a0, $t0 $a0\n");
+                text.append("\tsge $a0, $t0, $a0\n");
                 break;
             // Operador igualdad
             case "==":
-                text.append("\tseq $a0, $t0 $a0\n");
+                text.append("\tseq $a0, $t0, $a0\n");
                 break;
             case "!=":
-                text.append("\tsne $a0, $t0 $a0\n");
+                text.append("\tsne $a0, $t0, $a0\n");
                 break;
             // Operador booleano
             case "&&":
-                text.append("\tand $a0, $t0 $a0\n");
+                text.append("\tand $a0, $t0, $a0\n");
                 break;
             case "||":
-                text.append("\tor $a0, $t0 $a0\n");
+                text.append("\tor $a0, $t0, $a0\n");
                 break;
             default:
                 System.out.println("ERROR. TEST PURPOSE");
@@ -445,7 +475,8 @@ public class CodeGenerator implements VisitorCodeGen{
         int varAmount =
                 currentMethod.getParamAmount() + currentMethod.getVarAmount();
 
-        text.append("\taddiu $sp, $sp, "+(varAmount*4+8)+"\n\tmove $fp, $sp\n");
+        text.append("\taddiu $sp, $sp, "+(varAmount*4+8)+"\n\tlw $fp, 0($sp)" +
+                "\n");
         text.append("\taddiu $sp, $sp, 4\n\tlw $ra, 0($sp)\n\tjr $ra\n");
     }
 
