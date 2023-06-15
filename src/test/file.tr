@@ -45,5 +45,4 @@ fn main(){
     fib = new Fibonacci();
     n = IO.in_i32();
     (fib.sucesion_fib(n));
-
 }

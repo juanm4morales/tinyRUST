@@ -223,6 +223,9 @@ public class SymbolTable implements IJsonable {
                 if (parameterEntry!=null) {
                     return parameterEntry.getType();
                 }
+                if (currentClass==null) {
+                    return null;
+                }
                 variable = currentClass.getVariable(varId);
             }
         }
@@ -454,12 +457,17 @@ public class SymbolTable implements IJsonable {
      * del lado izquierdo, o es una subclase de la clase asociada al lado
      * lado izquierdo. False en caso contrario.
      */
-    public boolean satisfiesPolymorphism(String leftType, String rightType) {
+    public boolean satisfiesPolymorphism(Type leftType, Type rightType) {
+        String leftType_str = leftType.getType();
+        String rightType_str = rightType.getType();
         do {
-            if (Objects.equals(rightType, leftType)) {
+            if (Objects.equals(rightType_str, leftType_str)) {
                 return true;
             }
-            rightType = getClass(rightType).getInheritance();
+            if (DataType.Type.isReference(leftType) && Objects.equals(rightType_str, "nil")) {
+                return true;
+            }
+            rightType_str = getClass(rightType_str).getInheritance();
         } while (!Objects.equals(rightType, "Object"));
         return false;
     }

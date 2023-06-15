@@ -8,6 +8,7 @@ import SymbolTable.MethodEntry;
 import SymbolTable.ClassEntry;
 import SymbolTable.AttributeEntry;
 import SymbolTable.VarEntry;
+import SymbolTable.ParameterEntry;
 
 import java.util.*;
 
@@ -141,7 +142,7 @@ public class CodeGenerator implements VisitorCodeGen{
             // methodNode.getBlock().codeGen(this);
 
         }
-
+        text.append("# DECL_VARS_LOCALES\n");
         // AGREGAR VARIABLES LOCALES
         Collection<VarEntry> variables = currentMethod.getVariables().values();
         int varAmount = variables.size();
@@ -159,9 +160,16 @@ public class CodeGenerator implements VisitorCodeGen{
             }
 
         }
+        text.append("# FIN_DECL_VARS_LOCALES\n");
         // Generación de código para cada sentencia del método
         for (SentenceNode sentence:methodNode.getBlock().getSentences()) {
             sentence.codeGen(this);
+            // chainedTo = null;
+
+        }
+        if (Objects.equals(methodId, classId)) {    // CONSTRUCTOR
+            text.append("\tlw $a0, -8($fp) #\n");     // $a0 <- self
+            // (asignación!)
         }
         // (Optimizar)
         // SI HAY UN RETURN LAS SIGUIENTES SENTENCIAS NO TIENEN SENTIDO
@@ -184,6 +192,7 @@ public class CodeGenerator implements VisitorCodeGen{
     public void visit(BlockNode blockNode) {
         for (SentenceNode sentence: blockNode.getSentences()) {
             sentence.codeGen(this);
+            // chainedTo = null;
         }
     }
 
@@ -201,12 +210,15 @@ public class CodeGenerator implements VisitorCodeGen{
 
     @Override
     public void visit(AssignNode assignNode) {
-        text.append("#ASIGNACION\n");
+        text.append("# ASIGNACION\n");
         f_getVal = false;
         VarNode leftSide = assignNode.getLeftSide();
+        text.append("# LADO IZQUIERDO\n");
         leftSide.codeGen(this);
         f_getVal = true;
-        text.append("\tmove $t1, $a0\n");
+        text.append("\tsw $a0, 0($sp)\n");
+        text.append("\taddiu $sp, $sp, -4\n");
+        //text.append("\tmove $t1, $a0\n");
         // ACAAAAAAA
         ExpNode rightSide = assignNode.getRightSide();
         if (rightSide instanceof CallNode) {
@@ -214,9 +226,11 @@ public class CodeGenerator implements VisitorCodeGen{
                 c_self_position = v_asgm_pos;
             }
         }
-
+        text.append("# LADO DERECHO\n");
         rightSide.codeGen(this);
         /// Y ACAAA
+        text.append("\tlw $t1, 4($sp)\n");
+        text.append("\taddiu $sp, $sp, 4\n");
         text.append("\tsw $a0, ($t1)\n");
         text.append("#FIN_ASIGNACION\n");
     }
@@ -229,6 +243,8 @@ public class CodeGenerator implements VisitorCodeGen{
     @Override
     public void visit(VarNode varNode) {
         int position;
+        int offsetHeader = 3;
+        int offsetParams;
         if (Type.isReference(varNode.getType())) {
             f_getVal = false;
         }
@@ -259,30 +275,35 @@ public class CodeGenerator implements VisitorCodeGen{
                     chainedTo =
                             symbolTable.getClass(varNode.getType().getType());
                     chainVar.codeGen(this);
+                    chainedTo = null;
                 }
 
             }
             else {
-                // NO SE PUEDE ACCEDER A ATRIBUTOS PUBS y tampoco ..
+                // NO SE PUEDE ACCEDER A ATRIBUTOS PUBS.
             }
             return;
         }
         // Primero en la cadena
-        if (chainVar!=null) {
+        if (chainVar!=null) {   // Tiene una cadena  ... .(Xi).(Xi+1). ...
             if (Objects.equals(varNode.getToken().getLexeme(), "self")) {
                 f_self = true;
                 chainedTo = currentClass;
                 c_self_position = 2;
                 chainVar.codeGen(this);
+                f_self = false;
+                chainedTo = null;
             }
-            else {
+            else {              // No tiene una cadena
                 chainedTo =
                         symbolTable.getClass(varNode.getChainType().getType());
                 chainVar.codeGen(this);
+                chainedTo = null;
 
             }
         } else {
             VarEntry varST = symbolTable.getVariable(varId, currentMethod);
+
 
             if (varST == null) {
                 varST = symbolTable.getAttribute(varId, currentClass);
@@ -290,15 +311,23 @@ public class CodeGenerator implements VisitorCodeGen{
             }
 
             position = varST.getPosition();
-            v_asgm_pos = position+3; // offset 3 ($ra call, $fp call, self)
+            int offsetForVar = 0;
+
+            if (!(varST instanceof ParameterEntry)) {
+                offsetForVar = currentMethod.getParamAmount();
+            }
+            v_asgm_pos = position+offsetHeader; // offset 3 ($ra call, $fp call, self)
             text.append("\tmove $a0, $fp\n");
             if (f_self) {
                 text.append("\taddiu $a0, $a0, -8\n");
                 text.append("\tlw $s0, ($a0)\n");
                 text.append("\taddiu $a0, $s0, "+(4+position*4)+"\n"); // dir
+                f_self = false;
             }
             else {
-                text.append("\taddiu $a0, $a0, "+(-12-position*4)+"\n"); // dir
+                text.append("\taddiu $a0, $a0, "+(-12-(offsetForVar*4)-position*4)
+                        + "\n"); //
+                // dir
             }
 
             if (f_getVal) {
@@ -310,16 +339,39 @@ public class CodeGenerator implements VisitorCodeGen{
 
     @Override
     public void visit(CallNode callNode) {
-        String classId;
-        String methodId;
-        String vtableId;
-        int methodPosition = 0;
-        boolean constructor = false;
+        String classId;             // Identificador de la clase
+        String methodId;            // Identificador del método llamado
+        String vtableId = "";            // Label de la la V_table
+        int methodPosition = 0;     // Posición del método dentro de la clase
+        boolean constructor = false;// Se llama a un constructor?
+        boolean staticCall = callNode.isStatic();
+        if (chainedTo!=null) {          // Ya ha sido ENCADENADO
+            classId = chainedTo.getId();
+        }
+        else if (staticCall) { // Estático
+            classId = callNode.getStaticClassT().getLexeme();
+        }
+        else if (currentClass!=null){ // Llamada a método de la misma clase
+            // (dentro de la clase)
+            classId = currentClass.getId();
+        }
+        else { // CONSTRUCTOR
+            constructor = true;
+            classId = "";
+        }
+        /*
+        if (chainedTo==null && callNode.isStatic()) {
+            classId = callNode.getStaticClassT().getLexeme();
+        }
+        else {
+            classId = chainedTo.getId();
+        }
+        */
 
-        classId = chainedTo.getId();
+
         methodId = callNode.getToken().getLexeme();
         vtableId = classId + "_vtable";
-        if (callNode.firstInChain()) {
+        if (callNode.firstInChain()) {  // PRIMERO DE LA CADENA
             if (callNode.isStatic()){
                 ClassEntry staticClass =
                         symbolTable.getClass(callNode.getStaticClassT()
@@ -329,16 +381,13 @@ public class CodeGenerator implements VisitorCodeGen{
             else if (currentClass!=null) {
                 methodPosition = currentClass.getMethod(methodId).getPosition();
             }
-            else { // Constructor
-                constructor = true;
-            }
-        }
+
+        }                               // TAIL DE LA CADENA
         else {
             methodPosition = chainedTo.getMethod(methodId).getPosition();
         }
         text.append("# LLamado \n");
-        if (!constructor) {
-
+        if (!constructor && !staticCall) {
             // Cargamos referencia a la VT del objeto
             text.append("\tla $t0, "+vtableId+"\n");
             // Cargamos el label del metodo correspondiente
@@ -346,10 +395,9 @@ public class CodeGenerator implements VisitorCodeGen{
             //
         }
 
-
         text.append("\taddiu $sp, $sp, -4\n");  //
         text.append("\tsw $fp, 0($sp)\n");      // $fp caller
-        text.append("\taddiu $sp, $sp, -4\n");      //
+        text.append("\taddiu $sp, $sp, -4\n");  //
         //
         if (!f_main) {
             text.append("\tlw $t0, "+(-c_self_position*4)+"($fp)\n");    // $t0
@@ -371,13 +419,16 @@ public class CodeGenerator implements VisitorCodeGen{
             position++;
         }
         text.append("\taddiu $fp, $sp, "+(12+4*position)+"\n"); // nuevo $fp
-        if (!constructor) {
+        if (!constructor && !staticCall) {
             text.append("\tjalr $t1\n");
         }
-        else {
-            text.append("\tjal "+classId+"_"+classId+"\n");
+        else if (staticCall){
+            text.append("\tjal "+classId+"_"+methodId+"\n");
         }
-        constructor = false;
+        else { // CONSTRUCTOR. label -> [ClassID]_[ClassID]
+            text.append("\tjal "+methodId+"_"+methodId+"\n");
+        }
+        // constructor = false;
 
     }
     /**
@@ -521,6 +572,7 @@ public class CodeGenerator implements VisitorCodeGen{
         text.append("# WHILE\n");
         String whileLabel = ("while_"+branchAmount);
         String endLabel = ("end_while_"+branchAmount);
+        branchAmount++;
         text.append(whileLabel+":\n");
         ExpNode condition = whileNode.getCondition();
         condition.codeGen(this);
@@ -533,7 +585,7 @@ public class CodeGenerator implements VisitorCodeGen{
             text.append("\tj "+whileLabel+"\n");
         }
         text.append(endLabel+":\n");
-        branchAmount++;
+
         text.append("# END_WHILE\n");
     }
 
@@ -553,10 +605,12 @@ public class CodeGenerator implements VisitorCodeGen{
         if (elsePart!=null) {
             branchLabel = ("else_"+branchAmount);
             endLabel = ("endif_"+branchAmount);
+            branchAmount++;
         }
         else {
             branchLabel = ("endif_"+branchAmount);
             endLabel = branchLabel;
+            branchAmount++;
         }
         text.append("\tbeq $a0, $zero, "+branchLabel+"\n");
         if (thenPart!=null) {
@@ -568,7 +622,7 @@ public class CodeGenerator implements VisitorCodeGen{
             elsePart.codeGen(this);
         }
         text.append(endLabel+":\n");
-        branchAmount++;
+
         text.append("# END_IF_ELSE\n");
     }
 
@@ -578,19 +632,34 @@ public class CodeGenerator implements VisitorCodeGen{
      */
     private void predCodeGen() {
         text.append("IO_out_string:\n");
-        text.append("\tsw $ra, 0($fp)\n\tlw $a0, 4($sp)\n\tli $v0, 4\n" +
-                "\tsyscall\n\taddiu $sp, $sp, 8\n\tlw $fp, 0($sp)\n" +
-                "\taddiu $sp, $sp, 4\n\tjr $ra\n");
+        text.append("\tsw $ra, 0($fp)\n" +
+                "\tlw $a0, 4($sp)\n" +
+                "\tli $v0, 4\n" +
+                "\tsyscall\n" +
+                "\taddiu $sp, $sp, 8\n" +
+                "\tlw $fp, 0($sp)\n" +
+                "\taddiu $sp, $sp, 4\n" +
+                "\tjr $ra\n");
 
         text.append("IO_out_i32:\n");
-        text.append("\tsw $ra, 0($fp)\n\tlw $a0, 4($sp)\n\tli $v0, 1\n" +
-                "\tsyscall\n\taddiu $sp, $sp, 8\n\tlw $fp, 0($sp)\n" +
-                "\taddiu $sp, $sp, 4\n\tjr $ra\n");
+        text.append("\tsw $ra, 0($fp)\n" +
+                "\tlw $a0, -12($fp)\n" +
+                "\tli $v0, 1\n" +
+                "\tsyscall\n" +
+                "\taddiu $sp, $sp, 12\n" +
+                "\tlw $fp, 0($sp)\n" +
+                "\taddiu $sp, $sp, 4\n" +
+                "\tjr $ra\n");
 
         text.append("IO_out_bool:\n");
-        text.append("\tsw $ra, 0($fp)\n\tlw $a0, 4($sp)\n\tli $v0, 1\n" +
-                "\tsyscall\n\taddiu $sp, $sp, 8\n\tlw $fp, 0($sp)\n" +
-                "\taddiu $sp, $sp, 4\n\tjr $ra\n");
+        text.append("\tsw $ra, 0($fp)\n" +
+                "\tlw $a0, 4($sp)\n" +
+                "\tli $v0, 1\n" +
+                "\tsyscall\n" +
+                "\taddiu $sp, $sp, 8\n" +
+                "\tlw $fp, 0($sp)\n" +
+                "\taddiu $sp, $sp, 4\n" +
+                "\tjr $ra\n");
 
         text.append("IO_out_char:\n");
 

@@ -1,0 +1,8 @@
+fn main () {
+    I32: valor;
+    valor=12345;
+
+    (IO.out_i32(valor));
+
+
+}

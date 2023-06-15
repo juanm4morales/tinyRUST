@@ -1,0 +1,38 @@
+class Fibonacci {
+    pub I32: suma;
+    I32: i,j;
+    fn sucesion_fib(I32: n)-> void{
+        I32: idx;
+        i=0; j=1; suma=0; idx = 0;
+        while (idx <= n){
+            (out_idx(idx));
+            (out_val(i));
+            suma = i + j;
+            i = j;
+            j = suma;
+            idx = idx + 1;
+        }
+    }
+    create(){
+        i=0;
+        j=0;
+        suma=0;
+    }
+    fn out_idx(I32: num) -> void{
+        // (IO.out_str("f_"));
+        (IO.out_i32(num));
+        // (IO.out_str("="));
+    }
+    fn out_val(I32: s) -> void{
+        (IO.out_i32(s));
+        // (IO.out_str("\n"));
+    }
+}
+fn main(){
+    Fibonacci: fib;
+    I32: n;
+    fib = new Fibonacci();
+    // n = IO.in_i32();
+    n = 8;
+    (fib.sucesion_fib(n));
+}

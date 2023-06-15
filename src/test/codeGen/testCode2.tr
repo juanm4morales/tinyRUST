@@ -11,7 +11,9 @@ fn main(){
     a = 5;
 
     sum = ((2/2) + (3*4) + 1)/7;
+    (IO.out_i32(sum));
     sum = sum + a;
+    (IO.out_i32(sum));
 
     while (!b) {
         sum = sum - 1;
@@ -19,5 +21,7 @@ fn main(){
             b = true;
         }
     }
+    (IO.out_i32(sum));
+    (IO.out_i32(sum));
 
 }

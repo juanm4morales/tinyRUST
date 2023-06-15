@@ -25,5 +25,6 @@ fn main(){
     num = 5;
     p = new P(exp);
     pow = p.power(5);
+    (IO.out_i32(pow));
 
 }

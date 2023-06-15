@@ -26,6 +26,14 @@ public abstract class AccessNode extends ExpNode{
         this.chain = chain;
     }
 
+    public void addChain(AccessNode chain) {
+        AccessNode currentChain = this.chain;
+        while (currentChain.getChain()!=null) {
+            currentChain = currentChain.getChain();
+        }
+        currentChain.setChain(chain);
+    }
+
     /**
      * Getter del nodo encadenado
      * @return Nodo encadenado
