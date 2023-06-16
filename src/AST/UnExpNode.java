@@ -16,6 +16,8 @@ import java.util.Objects;
  * Nodo Expresión (ExpNode).
  * Contiene información sobre la expresión del lado derecho y el token del
  * operador asociado.
+ *
+ * @author Juan Martín Morales
  */
 public class UnExpNode extends ExpNode {
     ExpNode rightSide;      // lado derecho de la expresión unaria

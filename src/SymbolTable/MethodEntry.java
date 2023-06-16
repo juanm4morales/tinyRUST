@@ -6,6 +6,8 @@ import Utils.StringUtils;
 /**
  * Representa a los métodos de instancia y clase (static) declarados dentro de
  * una clase. Hereda características de Method.
+ *
+ * @author Juan Martín Morales
  */
 public class MethodEntry extends Method {
     private Type returnType;        // tipo de retorno

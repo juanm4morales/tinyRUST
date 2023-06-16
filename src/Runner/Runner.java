@@ -16,8 +16,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 /**
- * Runner representa el ejecutador de la etapa de análisis semántico con
- * declaraciones sobre un código fuente.
+ * Runner representa el ejecutador del compilador (Clase Punto de Partida).
+ *
+ * @author Juan Martín Morales
  */
 public class Runner {
     ArrayList<Token> tokens;    // Arreglo de tokens del código fuente
@@ -26,7 +27,7 @@ public class Runner {
     // Constructor de clase
     public Runner(String path){
         this.path = path;
-        tokens = new ArrayList<Token>();
+        // tokens = new ArrayList<Token>();
         error = false;
     }
 
@@ -53,14 +54,18 @@ public class Runner {
             System.err.println(e.getMessage());
         }
         if (!error){
-            // System.out.println("CORRECTO: ANALISIS SEMANTICO");
+            // MENSAJE INDICANDO QUE EL CÓDIGO CUMPLE CON LAS REGLAS DEL
+            // LENGUAJE.
+            // System.out.println("ANÁLISIS CORRECTO.");
             SymbolTable symbolTable = parser.getSymbolTable();
             symbolTable.setFileName(FileReaderWriter.getFileName(path));
-            // String sT_JSON = symbolTable.toJson(0);
             String filename = FileReaderWriter.getFileNameWithoutExt(path);
+            // Persistencia de la tabla de símbolos generada
+            // String sT_JSON = symbolTable.toJson(0);
             // FileReaderWriter.write(sT_JSON, filename.concat(".json") );
 
             AST ast = parser.getAST();
+            // Persistencia del AST generado
             // ast.setFileName(FileReaderWriter.getFileName(path));
             // String ast_JSON = ast.toJson(0);
             // FileReaderWriter.write(ast_JSON, filename.concat(".ast.json") );
@@ -71,13 +76,12 @@ public class Runner {
             String asm = codeGenerator.getCode();
             FileReaderWriter.write(asm, filename.concat(".asm"));
 
-
         }
-
     }
     /**
-     * Imprime los tokens identificados
+     * Imprime los tokens identificados.
      */
+    @Deprecated
     public void printTokens(){
         Token token;
         if (!error){

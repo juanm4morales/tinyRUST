@@ -7,6 +7,8 @@ import SymbolTable.SymbolTable;
  * Interfaz que contiene el método encargado de chequear los tipos de las
  * sentencias, y propagar estos tipos. Utiliza la tabla de símbolos para
  * consultarla, resolución de nombres, chequeo de tipos.
+ *
+ * @author Juan Martín Morales
  */
 public interface ISentenceCheck {
     /**

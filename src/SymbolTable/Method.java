@@ -8,7 +8,8 @@ import java.util.HashMap;
 
 /**
  * Clase que abstrae las características y comportamientos esenciales de todos
- * los tipos de métodos: constructores, main, métodos
+ * los tipos de métodos: constructores, main, métodos.
+ * @author Juan Martín Morales
  */
 public abstract class Method implements IJsonable {
     protected String id;        // identificador del método

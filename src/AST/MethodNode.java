@@ -8,6 +8,8 @@ import Utils.StringUtils;
  * La clase MethodNode representa un Nodo de un método: método de instancia,
  * de clase (static), constructor, método main. Contiene un bloque con las
  * sentencias del método en cuestión. Es una subclase de Nodo (Node).
+ *
+ * @author Juan Martín Morales
  */
 public class MethodNode extends Node {
     private String name;            // Identificador del método

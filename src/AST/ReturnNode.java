@@ -12,6 +12,8 @@ import java.util.Objects;
 /**
  * Clase que representa a una sentencia return. Es una subclase de Nodo
  * Sentencia (SentenceNode).
+ *
+ * @author Juan Martín Morales
  */
 public class ReturnNode extends SentenceNode{
     private ExpNode returnVal;      // Nodo expresión de retorno

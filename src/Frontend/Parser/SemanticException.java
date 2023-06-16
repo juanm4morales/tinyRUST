@@ -2,7 +2,9 @@ package Frontend.Parser;
 
 /**
  * Esta clase representa a los errores semánticos que ocurren en el parser
- * y en la consolidación de la tabla de símbolos
+ * y en la consolidación de la tabla de símbolos.
+ *
+ * @author Juan Martín Morales
  */
 public class SemanticException extends Exception{
     public SemanticException(String message, int row, int col) {

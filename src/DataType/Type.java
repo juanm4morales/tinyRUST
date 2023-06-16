@@ -6,6 +6,8 @@ import java.util.Objects;
 /**
  * Esta clase representa un tipo, tanto del retorno de una función, de un
  * atributo/variable local o de un argumento.
+ *
+ * @author Juan Martín Morales
  */
 public class Type {
     private String type;

@@ -2,6 +2,13 @@ package Frontend;
 
 import java.io.*;
 
+/**
+ * Esta clase facilita el proceso de serialización y deserialización de los
+ * achivos de tinyRust+. Tiene funcionalidades adicionales para extraer el
+ * nombre del archivo.
+ *
+ * @author Juan Martín Morales
+ */
 public class FileReaderWriter {
     public static BufferedReader read(String path) throws FileNotFoundException {;
         BufferedReader br;

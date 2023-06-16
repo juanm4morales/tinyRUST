@@ -2,6 +2,12 @@ package Backend;
 
 import AST.*;
 
+/**
+ * Interfaz útil para separar el objeto de tipo Node de la generación de
+ * código del mismo (Visitor Pattern).
+ *
+ * @author Juan Martín Morales
+ */
 public interface VisitorCodeGen {
     void visit(AccessNode accessNode);
     void visit(ArrayNode arrayNode);

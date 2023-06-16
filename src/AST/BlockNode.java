@@ -13,6 +13,8 @@ import java.util.Objects;
  * La clase BlockNode representa un bloque de un método, constructor,
  * estructura de control, etc. Contiene una lista ordena de las sentencias
  * dentro de este. Es una subclase de Nodo Sentencia (SentenceNode).
+ *
+ * @author Juan Martín Morales
  */
 public class BlockNode extends SentenceNode {
     private ArrayList<SentenceNode> sentences; // Lista de Nodos Sentencia

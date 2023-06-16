@@ -2,7 +2,9 @@ package Utils;
 
 /**
  * Esta interfaz define el comportamiento de un objeto del paquete SymbolTable,
- * para obtener su bloque de objeto en formato JSON
+ * para obtener su bloque de objeto en formato JSON.
+ *
+ * @author Juan Martín Morales
  */
 public interface IJsonable {
     /**

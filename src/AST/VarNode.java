@@ -15,6 +15,8 @@ import java.util.Objects;
  * Esta clase representa un Nodo de un Acceso a una variable. Es un subclase del
  * Nodo Acceso (AccessNode).
  * Los acceso que incluye son a: atributos self, atributos, variables.
+ *
+ * @author Juan Martín Morales
  */
 public class VarNode extends AccessNode {
     protected int size;

@@ -16,6 +16,8 @@ import java.util.Objects;
  * Nodo Acceso (AccessNode).
  * Los llamados que incluye son a: constructores, métodos estáticos y no
  * estáticos.
+ *
+ * @author Juan Martín Morales
  */
 public class CallNode extends AccessNode {
     private Token staticClassT;         // token de la clase de un método

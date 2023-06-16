@@ -11,6 +11,8 @@ import java.util.ArrayList;
  * La clase AST representa la raíz del árbol de sintaxis abstracta(AST).
  * Este nodo AST incluye las clases del código fuente y el método main.
  * Es una subclase de Nodo (Node)
+ *
+ * @author Juan Martín Morales
  */
 public class AST extends Node {
     private ArrayList<ClassNode> classes;   // Lista de Nodos Clase

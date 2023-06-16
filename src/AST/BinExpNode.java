@@ -14,6 +14,8 @@ import Utils.StringUtils;
  * Nodo Expresión (ExpNode).
  * Contiene información sobre las expresiones del lado izquierdo y derecho. Y
  * el token representa el operador binario asociado.
+ *
+ * @author Juan Martín Morales
  */
 public class BinExpNode extends ExpNode {
     private ExpNode leftSide;           // Lado izquierdo de expresión binaria

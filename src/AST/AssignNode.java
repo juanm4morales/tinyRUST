@@ -14,6 +14,8 @@ import java.util.Objects;
  * el lado izquierdo (leftSide) hay un Nodo Variable, y en el lado derecho
  * (rightSide) hay un Nodo Expresión. Es una subclase del Nodo Sentencia
  * (SentenceNode)
+ *
+ * @author Juan Martín Morales
  */
 public class AssignNode extends SentenceNode {
     private VarNode leftSide;               // Lado izquierdo de la asignación

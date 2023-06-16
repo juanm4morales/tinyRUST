@@ -11,6 +11,8 @@ import java.util.*;
  * Representa a las clases declarados junto a información que da la
  * identidad de la propia clase. Además de otra información y métodos útiles
  * para los chequeos semánticos.
+ *
+ * @author Juan Martín Morales
  */
 public class ClassEntry implements IJsonable {
     private String id; // Identificador de clase

@@ -8,6 +8,8 @@ import Utils.StringUtils;
 /**
  * Esta clase representa un parámetro (argumento) que tendrá asociado un método.
  * Incluye información relevante al mismo, junto a métodos de utilidad.
+ *
+ * @author Juan Martín Morales
  */
 public class ParameterEntry extends VarEntry {
 

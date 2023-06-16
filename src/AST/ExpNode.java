@@ -8,6 +8,8 @@ import Frontend.Lexer.Token;
  * Clase abstracta que representa a los Nodos Expresiones del AST.
  * Es una subclase del Nodo sentencia (SentenceNode).
  * Contiene información sobre el token asociado, y el tipo de la expresión.
+ *
+ * @author Juan Martín Morales
  */
 public abstract class ExpNode extends SentenceNode {
     Token token;                            // Token asociado a la expresión

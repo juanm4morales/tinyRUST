@@ -16,6 +16,8 @@ import java.util.Objects;
  * (VarNode).
  * Contiene información sobre el índice utilizado para acceder o construir
  * un Arreglo.
+ *
+ * @author Juan Martín Morales
  */
 public class ArrayNode extends VarNode{
     private ExpNode indexExp;           // Expresión del índice del arreglo

@@ -4,7 +4,9 @@ import java.util.*;
 
 /**
  * Esta clase representa los no terminales de la gramática junto a sus conjuntos
- * de primeros y siguientes
+ * de primeros y siguientes.
+ *
+ * @author Juan Martín Morales
  */
 public class Grammar {
     private final Map<NonTerminal, Set<String>> first;  // Conjuntos de Primeros

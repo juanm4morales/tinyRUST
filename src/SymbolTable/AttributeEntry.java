@@ -6,6 +6,8 @@ import Utils.StringUtils;
 /**
  * Esta clase representa los atributos declarados junto a información relevante
  * para el análisis y métodos de utilidad.
+ *
+ * @author Juan Martín Morales
  */
 public class AttributeEntry extends VarEntry{
     private boolean pub;            // indica si el atributo es público

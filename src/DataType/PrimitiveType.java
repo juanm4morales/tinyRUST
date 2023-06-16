@@ -3,6 +3,8 @@ package DataType;
 /**
  * Esta clase representa el tipo primitivo. Las características están
  * discretizadas en: I32, Str, Char, Bool
+ *
+ * @author Juan Martín Morales
  */
 public class PrimitiveType extends Type {
 

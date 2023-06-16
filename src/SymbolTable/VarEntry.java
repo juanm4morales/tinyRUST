@@ -8,6 +8,8 @@ import Utils.StringUtils;
 /**
  * Esta clase representa una entrada de una variable local o atributo, en la
  * tabla de símbolos.
+ *
+ * @author Juan Martín Morales
  */
 public class VarEntry implements IJsonable {
     protected String id;    // Identificador de la variable

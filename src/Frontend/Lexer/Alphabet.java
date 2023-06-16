@@ -4,6 +4,8 @@ import java.util.HashSet;
 
 /**
  * Esta es la clase que determina el alfabeto de entrada de nuestro lenguaje.
+ *
+ * @author Juan Martín Morales
  */
 public class Alphabet {
     // Conjunto donde se guardará el alfabeto

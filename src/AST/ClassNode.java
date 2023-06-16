@@ -12,6 +12,8 @@ import java.util.ArrayList;
  * La clase ClassNode representa un Nodo de una clase. Contiene métodos
  * con sus comportamiento (sentencias), y el método constructor. Es una
  * subclase de Nodo (Node)
+ *
+ * @author Juan Martín Morales
  */
 public class ClassNode extends Node{
     private String name;                    // Identificador de la clase

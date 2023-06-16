@@ -17,6 +17,8 @@ import java.util.Objects;
  * almacenar la información relevante obtenida de las clases y el método main.
  * También tiene una referencia a la clase actual, como tambíen al método actual
  * Además contiene métodos necesarios para la manipulación de la tabla.
+ *
+ * @author Juan Martín Morales
  */
 public class SymbolTable implements IJsonable {
     private String fileName;                        // Nombre del archivo
@@ -113,46 +115,84 @@ public class SymbolTable implements IJsonable {
         return classTable.putIfAbsent(classEntry.getId(), classEntry);
     }
 
+    /**
+     * Getter de la clase actual.
+     * @return Entrada de la clase actual.
+     */
     public ClassEntry getCurrentClass() {
         return currentClass;
     }
 
+    /**
+     * Getter del método actual.
+     * @return Entrada del método actual.
+     */
     public Method getCurrentMethod() {
         return currentMethod;
     }
 
+    /**
+     * Getter del método main.
+     * @return Entrada del método main.
+     */
     public MainEntry getMain() {
         return main;
     }
 
+    /**
+     * Busca y retorna una clase por su identificador.
+     * @param classId Identificador de la clase.
+     * @return Entrada de la clase correspondiente.
+     */
     public ClassEntry getClass(String classId){
         return classTable.get(classId);
     }
-
+    /*
     public ClassEntry getMeth(String classId){
         return classTable.get(classId);
     }
+     */
 
+    /**
+     * Setter del nombre del archivo.
+     * @param fileName Nombre del archivo.
+     */
     public void setFileName(String fileName) {
         this.fileName = fileName;
     }
 
+    /**
+     * Setter de la clase actual
+     * @param currentClass Entrada de la clase actual.
+     */
     public void setCurrentClass(ClassEntry currentClass) {
         this.currentClass = currentClass;
     }
 
-    public void setCurrentClass(String currentClass) {
-        this.currentClass = classTable.get(currentClass);
+    /**
+     * Setter de la clase actual.
+     * @param classId Identificador de la clase.
+     */
+    public void setCurrentClass(String classId) {
+        this.currentClass = classTable.get(classId);
     }
 
+    /**
+     * Setter del método actual.
+     * @param currentMethod Entrada del método.
+     */
     public void setCurrentMethod(Method currentMethod) {
         this.currentMethod = currentMethod;
     }
 
-    public void setCurrentMethod(String currentMethod) {
+    /**
+     * Setter del método actual.
+     * @param methodId Identificador del método.
+     */
+    public void setCurrentMethod(String methodId) {
         if (!Objects.equals(currentMethod, "main")) {
             ClassEntry classEntry = classTable.get(currentClass.getId());
-            this.currentMethod = classEntry.getMethod(currentMethod);
+            this.currentMethod = classEntry.getMethod(methodId);
             if (this.currentMethod==null) {
                 if (Objects.equals(currentMethod, currentClass.getId())){   // El método es un contructor
                     this.currentMethod = classEntry.getConstructor();
@@ -163,10 +203,9 @@ public class SymbolTable implements IJsonable {
             this.currentClass = null;
             this.currentMethod = main;
         }
-
     }
 
-    //
+    @Deprecated
     public VarEntry getVariable(String varId, Method method,
                                 ClassEntry classEntry) {
         VarEntry var;
@@ -178,11 +217,24 @@ public class SymbolTable implements IJsonable {
         }
         return var;
     }
+
+    /**
+     * Busca y retorna la variable o parámetro del método indicado.
+     * @param varId Identificador de la variable.
+     * @param method Entrada del método.
+     * @return Entrada de la variable.
+     */
     public VarEntry getVariable(String varId, Method method) {
         return method.getVarPar(varId);
 
     }
 
+    /**
+     * Busca y retorna el atributo de la clase indicada.
+     * @param varId Identificador del atributo.
+     * @param classEntry Entrada de la clase.
+     * @return Entrada del atributo.
+     */
     public AttributeEntry getAttribute(String varId, ClassEntry classEntry) {
         return classEntry.getVariable(varId);
 

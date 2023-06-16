@@ -7,6 +7,8 @@ import java.util.HashMap;
 /**
  * Esta clase representa las características esenciales de un constructor de
  * clase. Hereda de la clase abstracta Method.
+ *
+ * @author Juan Martín Morales
  */
 public class ConstructorEntry extends Method {
     public ConstructorEntry(String id) {

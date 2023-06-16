@@ -3,6 +3,8 @@ package Frontend.Lexer;
 /**
  * Token representa no solo al token en si, con atributo y/o valor, también
  * indica su ubicación correspondiente en el archivo fuente
+ *
+ * @author Juan Martín Morales
   */
 
 public class Token {
@@ -16,9 +18,19 @@ public class Token {
         this.row = row;
         this.col = col;
     }
+
+    /**
+     * Getter del tag del Token
+     * @return Cadena con el tag del Token
+     */
     public String getTag() {
         return tag;
     }
+
+    /**
+     * Getter del lexema asociado al Token
+     * @return Cadena con el lexema asociado al Token
+     */
     public String getLexeme() {
         return lexeme;
     }

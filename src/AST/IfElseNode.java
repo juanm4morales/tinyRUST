@@ -12,6 +12,8 @@ import Utils.StringUtils;
  * información sobre la sentencia que se ejecutará si se cumple la condición,
  * y un atributo opcional con la sentencia que se ejecutará si no se cumple
  * la condición.
+ *
+ * @author Juan Martín Morales
  */
 public class IfElseNode extends SentenceNode {
     private ExpNode condition;          // Expresión condición

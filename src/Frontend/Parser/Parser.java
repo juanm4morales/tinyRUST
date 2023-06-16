@@ -20,6 +20,8 @@ import java.util.Objects;
  * junto a sus atributos y métodos necesarios para llevar a cabo su tarea.
  * También realiza chequeos semánticos de las declaraciones de variables, clases
  * y métodos. Construye la tabla de símbolos del programa.
+ *
+ * @author Juan Martín Morales
  */
 public class Parser {
     private Token currentToken;             // token actual

@@ -11,6 +11,8 @@ import Utils.StringUtils;
  * while. Contiene información sobre la expresión de condición (debe ser de
  * tipo Bool) e información sobre la sentencia que se ejecutará
  * iterativamente mientras se cumpla la condición establecida.
+ *
+ * @author Juan Martín Morales
  */
 public class WhileNode extends SentenceNode {
     private ExpNode condition;      // Expresión de la condición a cumplir

@@ -10,6 +10,8 @@ import SymbolTable.SymbolTable;
  * ser un llamado a una función o el acceso a una variable.
  * Este tipo de nodos son encadenables con otros Nodos de esta clase.
  * Es una subclase del Nodo Expresión (ExpNode)
+ *
+ * @author Juan Martín Morales
  */
 public abstract class AccessNode extends ExpNode{
     AccessNode chain;                       // Nodo de acceso encadenado a este

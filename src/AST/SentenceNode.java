@@ -5,6 +5,8 @@ import Backend.VisitorCodeGen;
 /**
  * Clase abstracta que representa una sentencia en un método del programa.
  * Subclase de Nodo (Node)
+ *
+ * @author Juan Martín Morales
  */
 public abstract class SentenceNode extends Node {
     private boolean hasReturnStmt;      // Determina si la sentencia, o dentro de esta hay un return

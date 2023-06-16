@@ -11,6 +11,8 @@ import Utils.StringUtils;
  * Clase que representa a un NodoLiteral: literal entero, literal cadena,
  * literal caracter, literal nil, literal bool. Es una subclase de Nodo
  * expresión (ExpNode).
+ *
+ * @author Juan Martín Morales
  */
 public class LiteralNode extends ExpNode {
 

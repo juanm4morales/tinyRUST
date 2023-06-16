@@ -9,39 +9,61 @@ import SymbolTable.ClassEntry;
 import SymbolTable.AttributeEntry;
 import SymbolTable.VarEntry;
 import SymbolTable.ParameterEntry;
+import Utils.StringUtils;
 
 import java.util.*;
 
+/**
+ * Esta clase mediante los nodos del AST y la tabla de símbolos, generada en
+ * el análisis del código tinyRust+, traduce a instrucciones de MIPS32.
+ *
+ * @author Juan Martín Morales
+ */
 public class CodeGenerator implements VisitorCodeGen{
+    // Porción del código .data
     private static StringBuilder data = new StringBuilder();
+    // Porción del código .data para vtables
     private static StringBuilder vtables = new StringBuilder();
+    // Porción del código .text
     private static StringBuilder text = new StringBuilder();
+    // Cantidad de labels de branch creados
     private static int branchAmount = 0;
-
+    // Tabla de Símbolos
     private SymbolTable symbolTable;
+    // Clase actual
     private ClassEntry currentClass;
+    // Método actual
     private Method currentMethod;
-
+    // Referencia a la entrada de la clase encadenada al nodo actual
     private ClassEntry chainedTo;
-    // flags útiles
-    private static boolean f_getVal = true;
-    private static boolean f_self = false;
-    private static boolean f_main = false;
-
+    // Flags útiles
+    private static boolean f_getVal = true; // Obtener valor?
+    private static boolean f_self = false;  // Acceso self?
+    private static boolean f_main = false;  // Posicionados en el main=
+    //
     private static int v_asgm_pos = 0;
-
+    //
     private static int c_self_position = 2;
 
 
-
+    /**
+     * Constructor del generador de código
+     * @param symbolTable
+     */
     public CodeGenerator(SymbolTable symbolTable) {
         this.symbolTable = symbolTable;
         data.append("\t.data\n");
-        vtables.append("\t# vtables\n\t.data\n");
-        text.append("\t.text\n\t.globl main\n");
+        vtables.append("# vtables_section\n" +
+                "\t.data\n");
+        text.append("\t.text\n" +
+                "\t.globl main\n" +
+                "\t j main\n\n");
     }
 
-
+    /**
+     * Generador de código para el código completo
+     * @param ast Referencia al AST
+     */
     @Override
     public void visit(AST ast) {
         predCodeGen();
@@ -54,9 +76,15 @@ public class CodeGenerator implements VisitorCodeGen{
         currentClass = null;
         currentMethod = symbolTable.getMain();
         main.codeGen(this);
+        text.append("\tli $v0, 10\n" +
+                "\tsyscall\n");
         f_main = false;
     }
 
+    /**
+     * Generador de código para el cuerpo de una clase.
+     * @param classNode Referencial al nodo classNode
+     */
     @Override
     public void visit(ClassNode classNode) {
         String classId = classNode.getName();
@@ -80,6 +108,10 @@ public class CodeGenerator implements VisitorCodeGen{
         }
     }
 
+    /**
+     * Generador de código para el cuerpo de un método.
+     * @param methodNode Referencia al nodo MethodNode
+     */
     @Override
     public void visit(MethodNode methodNode) {
         String classId =(currentClass==null) ? "" : currentClass.getId();
@@ -188,6 +220,10 @@ public class CodeGenerator implements VisitorCodeGen{
         }
     }
 
+    /**
+     * Generador de código para todas las sentencias de un bloque.
+     * @param blockNode N
+     */
     @Override
     public void visit(BlockNode blockNode) {
         for (SentenceNode sentence: blockNode.getSentences()) {
@@ -208,36 +244,51 @@ public class CodeGenerator implements VisitorCodeGen{
         
     }
 
+    /**
+     * Generador de código para las asignaciones <var> = <exp>.
+     * @param assignNode
+     */
     @Override
     public void visit(AssignNode assignNode) {
+        boolean callReturn = false; // Determina si el lado derecho es un
+        // callNode
         text.append("# ASIGNACION\n");
-        f_getVal = false;
+        f_getVal = false;   // No obtener valor. Solo referencia del lado izq.
         VarNode leftSide = assignNode.getLeftSide();
         text.append("# LADO IZQUIERDO\n");
         leftSide.codeGen(this);
-        f_getVal = true;
+        f_getVal = true;    // Por defecto se obtiene el valor.
         text.append("\tsw $a0, 0($sp)\n");
         text.append("\taddiu $sp, $sp, -4\n");
         //text.append("\tmove $t1, $a0\n");
-        // ACAAAAAAA
+        //
         ExpNode rightSide = assignNode.getRightSide();
         if (rightSide instanceof CallNode) {
+            callReturn = true;
             if (((CallNode) rightSide).isConstructor()) {
                 c_self_position = v_asgm_pos;
             }
         }
+        // if (rightSide)
         text.append("# LADO DERECHO\n");
         rightSide.codeGen(this);
-        /// Y ACAAA
+        //
         text.append("\tlw $t1, 4($sp)\n");
         text.append("\taddiu $sp, $sp, 4\n");
-        text.append("\tsw $a0, ($t1)\n");
+        if (callReturn) {
+            text.append("\tsw $v0, ($t1)\n");
+        }
+        else {
+            text.append("\tsw $a0, ($t1)\n");
+        }
+
+
         text.append("#FIN_ASIGNACION\n");
     }
 
     /**
-     * Generador de código para acceso a variables (encadenadas o no) de todo
-     * tipo. Acceso a valor o a referencia.
+     * Generador de código para acceso a variables (encadenadas o no) de
+     * cualquier tipo. Acceso a valor o a referencia.
      * @param varNode
      */
     @Override
@@ -263,7 +314,7 @@ public class CodeGenerator implements VisitorCodeGen{
 
                 // text.append("\tmove $a0, $fp\n");        // Ya está cargado
                 // text.append("\taddiu $a0, $a0, -8\n");   // self en $s0
-                //text.append("\tlw $s0, ($a0)\n");         //
+                // text.append("\tlw $s0, ($a0)\n");         //
                 text.append("\taddiu $a0, $s0, "+(4+position*4)+"\n");
 
                 f_self = false;
@@ -331,12 +382,17 @@ public class CodeGenerator implements VisitorCodeGen{
             }
 
             if (f_getVal) {
-                text.append("\tlw $a0, ($a0)\n"); // val
+                text.append("\tlw $a0, ($a0)\n"); // val. Obtengo el valor
             }
+            //
         }
 
     }
 
+    /**
+     * Generador de código para llamado a métodos (encadenados o no).
+     * @param callNode
+     */
     @Override
     public void visit(CallNode callNode) {
         String classId;             // Identificador de la clase
@@ -403,13 +459,15 @@ public class CodeGenerator implements VisitorCodeGen{
             text.append("\tlw $t0, "+(-c_self_position*4)+"($fp)\n");    // $t0
             // <- self
         }
-        // REPETIDO SE PUEDE BORRAR condicional (!!!!!!!!!!!!!!)
+        // (!)
         else {
             text.append("\tlw $t0, "+(-c_self_position*4)+"($fp)\n");
         }
-
+        if (staticCall) {
+            text.append("\tli $t0, 0\n");       // No uso self (cargo 0)
+        }
         text.append(("\tsw $t0, 0($sp)\n"));    // Guardo self en stack
-        text.append(("\taddiu $sp, $sp, -4\n"));    // Guardo self en stack
+        text.append(("\taddiu $sp, $sp, -4\n"));// Guardo self en stack
 
         int position = 0;
         for (ExpNode exp:callNode.getParamExp()) {
@@ -522,13 +580,15 @@ public class CodeGenerator implements VisitorCodeGen{
     public void visit(ReturnNode returnNode) {
         ExpNode returnVal = returnNode.getReturnVal();
         returnVal.codeGen(this);
-        text.append("\tmove $v0, $a0\n");
+        // text.append("\tmove $v0, $a0\n"); Mod 1 (return reg $a0. -> to $v0)
         int varAmount =
                 currentMethod.getParamAmount() + currentMethod.getVarAmount();
 
-        text.append("\taddiu $sp, $sp, "+(varAmount*4+8)+"\n\tlw $fp, 0($sp)" +
-                "\n");
-        text.append("\taddiu $sp, $sp, 4\n\tlw $ra, 0($sp)\n\tjr $ra\n");
+        text.append("\taddiu $sp, $sp, "+(varAmount*4+8)+"\n" +
+                "\tlw $fp, 0($sp)\n");
+        text.append("\taddiu $sp, $sp, 4\n" +
+                "\tlw $ra, 0($sp)\n" +
+                "\tjr $ra\n");
     }
 
     /**
@@ -556,8 +616,10 @@ public class CodeGenerator implements VisitorCodeGen{
                 }
                 break;
             case "Str":
-                data.append(literal+":\t.asciiz \""+literal+"\"\n");
+                String validLabel = StringUtils.getAsciiLabel(literal);
+                data.append(validLabel+": .asciiz \""+literal+"\"\n");
                 // hay que colocar el string en $a0
+                text.append("\tla $a0, "+validLabel+"\n");
                 break;
         }
         
@@ -631,12 +693,12 @@ public class CodeGenerator implements VisitorCodeGen{
      * Generador de código de las clases predefinidas de tinyRust+
      */
     private void predCodeGen() {
-        text.append("IO_out_string:\n");
+        text.append("IO_out_str:\n");
         text.append("\tsw $ra, 0($fp)\n" +
-                "\tlw $a0, 4($sp)\n" +
+                "\tlw $a0, -12($fp)\n" +
                 "\tli $v0, 4\n" +
                 "\tsyscall\n" +
-                "\taddiu $sp, $sp, 8\n" +
+                "\taddiu $sp, $sp, 12\n" +
                 "\tlw $fp, 0($sp)\n" +
                 "\taddiu $sp, $sp, 4\n" +
                 "\tjr $ra\n");
@@ -651,25 +713,58 @@ public class CodeGenerator implements VisitorCodeGen{
                 "\taddiu $sp, $sp, 4\n" +
                 "\tjr $ra\n");
 
+        data.append("true: .asciiz \"true\"\n");
+        data.append("false: .asciiz \"false\"\n");
+
         text.append("IO_out_bool:\n");
         text.append("\tsw $ra, 0($fp)\n" +
-                "\tlw $a0, 4($sp)\n" +
-                "\tli $v0, 1\n" +
+                "\tlw $a0, -12($fp)\n" +
+                "\tli $t0, 1\n" +
+                "\tbeq $a0, $t0, IO_out_bool_true_case\n" +
+                "\tla $a0, false\n" +
+                "\tj IO_out_bool_end\n" +
+                "IO_out_bool_true_case:\n" +
+                "\tla $a0, true\n" +
+                "IO_out_bool_end:\n" +
+                "\tli $v0, 4\n" +
+                "\tsyscall\n" +
+                "\taddiu $sp, $sp, 12\n" +
+                "\tlw $fp, 0($sp)\n" +
+                "\taddiu $sp, $sp, 4\n" +
+                "\tjr $ra\n");
+
+        text.append("IO_out_char:\n");
+        text.append("\tsw $ra, 0($fp)\n" +
+                "\tlw $a0, -12($fp)\n" +
+                "\tli $v0, 11\n" +
+                "\tsyscall\n" +
+                "\taddiu $sp, $sp, 12\n" +
+                "\tlw $fp, 0($sp)\n" +
+                "\taddiu $sp, $sp, 4\n" +
+                "\tjr $ra\n");
+
+        text.append("IO_out_array:\n");
+
+        text.append("IO_in_str:\n");
+
+
+        text.append("IO_in_i32:\n");
+        text.append("\tsw $ra, 0($fp)\n" +
+                "\tli $v0, 5\n" +
                 "\tsyscall\n" +
                 "\taddiu $sp, $sp, 8\n" +
                 "\tlw $fp, 0($sp)\n" +
                 "\taddiu $sp, $sp, 4\n" +
                 "\tjr $ra\n");
 
-        text.append("IO_out_char:\n");
-
-        text.append("IO_out_array:\n");
-
-        text.append("IO_in_str:\n");
-
-        text.append("IO_in_i32:\n");
-
         text.append("IO_in_bool:\n");
+        text.append("\tsw $ra, 0($fp)\n" +
+                "\tli $v0, 5\n" +
+                "\tsyscall\n" +
+                "\taddiu $sp, $sp, 8\n" +
+                "\tlw $fp, 0($sp)\n" +
+                "\taddiu $sp, $sp, 4\n" +
+                "\tjr $ra\n");
 
         text.append("IO_in_Char:\n");
 
@@ -681,7 +776,7 @@ public class CodeGenerator implements VisitorCodeGen{
 
 
     }
-
+    /*
     private void defaultValues() {
         data.append("default_char:\t.byte ' '\n");
         data.append("default_string:\t.asciiz \"\"\n");
@@ -690,10 +785,12 @@ public class CodeGenerator implements VisitorCodeGen{
     private void storeString(String memRefReg, String strReg) {
 
     }
+    */
+
 
     /**
      * Getter del código generado
-     * @return String con el código asm
+     * @return String con el código .asm
      */
     public String getCode(){
         StringBuilder asm = new StringBuilder();

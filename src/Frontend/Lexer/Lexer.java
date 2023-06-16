@@ -6,7 +6,9 @@ import java.util.Hashtable;
 
 /**
  * Esta clase representa al analizador léxico (Lexer), sus atributos importantes
- * y
+ * y su autómata finito reconocedor de tokens.
+ *
+ * @author Juan Martín Morales
  */
 public class Lexer{
     // Atributos

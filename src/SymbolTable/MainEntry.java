@@ -5,6 +5,8 @@ import Utils.StringUtils;
 /**
  * Clase que representa al método main. Hereda de la clase Method todas las
  * características necesarias para esta.
+ *
+ * @author Juan Martín Morales
  */
 public class MainEntry extends Method {
     private static final String MAIN = "main"; // identificador de método constante "main"
