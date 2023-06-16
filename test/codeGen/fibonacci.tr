@@ -1,5 +1,5 @@
 class Fibonacci {
-    pub I32: suma;
+    I32: suma;
     I32: i,j;
     fn sucesion_fib(I32: n)-> void{
         I32: idx;
@@ -19,20 +19,21 @@ class Fibonacci {
         suma=0;
     }
     fn out_idx(I32: num) -> void{
-        // (IO.out_str("f_"));
+        (IO.out_str("f_"));
         (IO.out_i32(num));
-        // (IO.out_str("="));
+        (IO.out_str("="));
     }
     fn out_val(I32: s) -> void{
         (IO.out_i32(s));
-        // (IO.out_str("\n"));
+        (IO.out_str("\n"));
     }
 }
 fn main(){
     Fibonacci: fib;
     I32: n;
     fib = new Fibonacci();
-    // n = IO.in_i32();
-    n = 8;
+    n = IO.in_i32();
+    // n = 8;
+    // n = 12;
     (fib.sucesion_fib(n));
 }

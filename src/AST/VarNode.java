@@ -91,6 +91,7 @@ public class VarNode extends AccessNode {
                     // SE PUEDE LANZAR UN ERROR POR UTILIZAR MAL EL SELF
                 }
                 else {
+
                     super.chainType = symbolTable.getVariableType(
                             super.token.getLexeme(), false);
                     if (super.chainType == null) {

@@ -22,7 +22,7 @@ import java.util.ArrayList;
  */
 public class Runner {
     ArrayList<Token> tokens;    // Arreglo de tokens del código fuente
-    String path;                // Dirección del archivo a escanear
+    String path;                // Dirección del archivo a escanear y compilar
     boolean error;              // Atributo que determina si ha habido un error
     // Constructor de clase
     public Runner(String path){

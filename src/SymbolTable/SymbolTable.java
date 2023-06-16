@@ -147,11 +147,11 @@ public class SymbolTable implements IJsonable {
     public ClassEntry getClass(String classId){
         return classTable.get(classId);
     }
-    /*
+
     public ClassEntry getMeth(String classId){
         return classTable.get(classId);
     }
-     */
+
 
     /**
      * Setter del nombre del archivo.
@@ -171,10 +171,10 @@ public class SymbolTable implements IJsonable {
 
     /**
      * Setter de la clase actual.
-     * @param classId Identificador de la clase.
+     * @param currentClass Identificador de la clase.
      */
-    public void setCurrentClass(String classId) {
-        this.currentClass = classTable.get(classId);
+    public void setCurrentClass(String currentClass) {
+        this.currentClass = classTable.get(currentClass);
     }
 
     /**
@@ -187,12 +187,12 @@ public class SymbolTable implements IJsonable {
 
     /**
      * Setter del método actual.
-     * @param methodId Identificador del método.
+     * @param currentMethod Identificador del método.
      */
-    public void setCurrentMethod(String methodId) {
+    public void setCurrentMethod(String currentMethod) {
         if (!Objects.equals(currentMethod, "main")) {
             ClassEntry classEntry = classTable.get(currentClass.getId());
-            this.currentMethod = classEntry.getMethod(methodId);
+            this.currentMethod = classEntry.getMethod(currentMethod);
             if (this.currentMethod==null) {
                 if (Objects.equals(currentMethod, currentClass.getId())){   // El método es un contructor
                     this.currentMethod = classEntry.getConstructor();
@@ -205,7 +205,7 @@ public class SymbolTable implements IJsonable {
         }
     }
 
-    @Deprecated
+
     public VarEntry getVariable(String varId, Method method,
                                 ClassEntry classEntry) {
         VarEntry var;

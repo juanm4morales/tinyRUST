@@ -8,13 +8,14 @@ fn main(){
     I32: sum;
     I32: a;
     Bool: b;
-    a = 5;
-
-    sum = ((2/2) + (3*4) + 1)/7;
+    (IO.out_str("Ingrese un numero:\n"));
+    a = IO.in_i32();
+    b = false;
+    sum = ((8/2) + (3*4) + 1)/7;
     (IO.out_i32(sum));
     sum = sum + a;
     (IO.out_i32(sum));
-
+    (IO.out_bool(b));
     while (!b) {
         sum = sum - 1;
         if (sum<=0) {
@@ -22,6 +23,6 @@ fn main(){
         }
     }
     (IO.out_i32(sum));
-    (IO.out_i32(sum));
+    (IO.out_i32(a));
 
 }
